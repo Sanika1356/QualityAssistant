@@ -327,9 +327,87 @@ class PersistenceTests(BatchTestBase):
         self.assertEqual(
             set(body['items'][0]),
             {'id', 'original_filename', 'status', 'failure_reason', 'predicted_class',
-             'confidence', 'defect_probability', 'model_version'},
+             'confidence', 'defect_probability', 'model_version', 'image_url'},
         )
         self.assertEqual(body['items'][0]['predicted_class'], items[0].predicted_class)
+
+
+class InspectionImageTests(BatchTestBase):
+    def setUp(self):
+        super().setUp()
+        body = self.post_batch([upload(SAMPLE_A), upload(SAMPLE_B), upload(VALIDATION_FILES[0])]).json()
+        self.batch_id = body['id']
+        self.png_item, self.jpg_item, self.failed_item = body['items']
+
+    def image_url(self, item_id):
+        return f'/api/inspections/{item_id}/image/'
+
+    def get_as(self, user, item_id):
+        self.client.force_authenticate(user)
+        return self.client.get(self.image_url(item_id))
+
+    def read(self, response):
+        # Reading the stream to the end lets the test client close the file itself.
+        return b''.join(response.streaming_content)
+
+    def test_image_url_in_batch_response(self):
+        self.assertEqual(self.png_item['image_url'], f'http://testserver{self.image_url(self.png_item["id"])}')
+        self.assertIsNone(self.failed_item['image_url'])
+        self.client.force_authenticate(self.engineer)
+        items = self.client.get(f'/api/batches/{self.batch_id}/').json()['items']
+        self.assertEqual([i['image_url'] is None for i in items], [False, False, True])
+
+    def test_owner_gets_image_with_correct_content_type(self):
+        for item, source, content_type in (
+            (self.png_item, SAMPLE_A, 'image/png'),
+            (self.jpg_item, SAMPLE_B, 'image/jpeg'),
+        ):
+            with self.subTest(source.name):
+                response = self.get_as(self.engineer, item['id'])
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response['Content-Type'], content_type)
+                self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
+                self.assertIn('private', response['Cache-Control'])
+                self.assertEqual(self.read(response), source.read_bytes())
+
+    def test_content_type_from_bytes_not_name(self):
+        # PNG bytes uploaded as .jpg are still served as image/png.
+        body = self.post_batch([upload(SAMPLE_A, 'looks_like.jpg')]).json()
+        response = self.get_as(self.engineer, body['items'][0]['id'])
+        self.assertEqual(response['Content-Type'], 'image/png')
+        self.assertEqual(self.read(response), SAMPLE_A.read_bytes())
+
+    def test_other_engineer_gets_404(self):
+        self.assertEqual(self.get_as(self.engineer2, self.png_item['id']).status_code, 404)
+
+    def test_supervisor_gets_image(self):
+        response = self.get_as(self.supervisor, self.png_item['id'])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.read(response), SAMPLE_A.read_bytes())
+
+    def test_no_role_gets_403(self):
+        self.assertEqual(self.get_as(self.no_role, self.png_item['id']).status_code, 403)
+
+    def test_anonymous_refused(self):
+        self.assertIn(self.get_as(None, self.png_item['id']).status_code, (401, 403))
+
+    def test_failed_item_without_image_gets_404(self):
+        for user in (self.engineer, self.supervisor):
+            with self.subTest(user=user.username):
+                self.assertEqual(self.get_as(user, self.failed_item['id']).status_code, 404)
+
+    def test_missing_item_gets_404(self):
+        self.assertEqual(self.get_as(self.supervisor, 999999).status_code, 404)
+
+    def test_missing_file_on_disk_gets_404(self):
+        Path(Inspection.objects.get(pk=self.png_item['id']).image.path).unlink()
+        with self.assertLogs('inspections.views', level='WARNING'):
+            self.assertEqual(self.get_as(self.engineer, self.png_item['id']).status_code, 404)
+
+    def test_media_files_are_not_publicly_served(self):
+        name = Inspection.objects.get(pk=self.png_item['id']).image.name
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.get(f'/{settings.MEDIA_URL}{name}').status_code, 404)
 
 
 class CommandTests(TestCase):
