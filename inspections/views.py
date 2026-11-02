@@ -1,7 +1,10 @@
 import logging
 
+from django.core.exceptions import SuspiciousFileOperation
 from django.db import transaction
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
+from PIL import Image, UnidentifiedImageError
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
@@ -75,7 +78,8 @@ class BatchCreateView(APIView):
                 if not reason:
                     transaction.on_commit(lambda pk=item.pk: queue_inspection(pk))
 
-        data = BatchSerializer(batch_queryset().get(pk=batch.pk)).data
+        batch = batch_queryset().get(pk=batch.pk)
+        data = BatchSerializer(batch, context={'request': request}).data
         return Response(data, status=status.HTTP_201_CREATED)
 
 
@@ -86,4 +90,46 @@ class BatchDetailView(APIView):
         batches = batch_queryset()
         if not in_group(request.user, SUPERVISOR):
             batches = batches.filter(submitted_by=request.user)
-        return Response(BatchSerializer(get_object_or_404(batches, pk=pk)).data)
+        batch = get_object_or_404(batches, pk=pk)
+        return Response(BatchSerializer(batch, context={'request': request}).data)
+
+
+IMAGE_CONTENT_TYPES = {'JPEG': 'image/jpeg', 'PNG': 'image/png'}
+
+
+class InspectionImageView(APIView):
+    """Stream a saved inspection image to its owner or a Supervisor. Media is never public."""
+
+    permission_classes = [IsEngineerOrSupervisor]
+
+    def get(self, request, pk):
+        inspections = Inspection.objects.all()
+        if not in_group(request.user, SUPERVISOR):
+            inspections = inspections.filter(submitted_by=request.user)
+        inspection = get_object_or_404(inspections, pk=pk)
+        if not inspection.image:
+            raise Http404('This inspection has no saved image.')
+
+        try:
+            # Storage.open keeps the path inside MEDIA_ROOT.
+            file = inspection.image.storage.open(inspection.image.name, 'rb')
+        except (FileNotFoundError, SuspiciousFileOperation):
+            logger.warning('Image file missing for inspection %s', pk)
+            raise Http404('Image file is not available.')
+
+        # Content type comes from the bytes, not from the stored name.
+        try:
+            with Image.open(file) as image:
+                content_type = IMAGE_CONTENT_TYPES.get(image.format)
+        except (UnidentifiedImageError, OSError):
+            content_type = None
+        if content_type is None:
+            file.close()
+            raise Http404('Image file is not available.')
+        file.seek(0)
+
+        response = FileResponse(file, content_type=content_type)
+        response['Content-Disposition'] = 'inline'
+        response['Cache-Control'] = 'private, no-store'
+        response['X-Content-Type-Options'] = 'nosniff'
+        return response
