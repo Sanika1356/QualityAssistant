@@ -17,6 +17,7 @@ from .permissions import (
     IsAdministratorOrReadOnly,
     IsEngineer,
     IsEngineerOrSupervisor,
+    IsEngineerSubmitter,
     IsSupervisor,
     in_group,
 )
@@ -50,6 +51,14 @@ def batch_queryset():
     return Batch.objects.select_related('product', 'submitted_by').prefetch_related('items')
 
 
+def find_product(product_ref):
+    """Look a product up by its product_id (e.g. P-PLATE01), or by numeric pk as a fallback."""
+    product = Product.objects.filter(product_id=product_ref).first()
+    if product is None and product_ref.isdigit():
+        product = Product.objects.filter(pk=int(product_ref)).first()
+    return product
+
+
 class BatchCreateView(APIView):
     permission_classes = [IsEngineer]
     parser_classes = [MultiPartParser, FormParser]
@@ -63,9 +72,7 @@ class BatchCreateView(APIView):
             )
 
         product_ref = str(request.data.get('product') or '').strip()
-        product = Product.objects.filter(product_id=product_ref).first()
-        if product is None and product_ref.isdigit():
-            product = Product.objects.filter(pk=int(product_ref)).first()
+        product = find_product(product_ref)
         if product is None:
             return Response(
                 {'detail': f'Unknown product "{product_ref}".'}, status=status.HTTP_400_BAD_REQUEST
@@ -165,10 +172,63 @@ def visible_inspections(user):
 
 
 class InspectionListAPIView(generics.ListAPIView):
-    """History, filtered with ?prediction= and ?review_status=."""
+    """GET: history, filtered with ?prediction= and ?review_status=.
+    POST: inspect one image now, in this request (validate-then-predict flow by Person 2).
+    """
 
     serializer_class = InspectionSerializer
     permission_classes = [IsEngineerOrSupervisor]
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsEngineerSubmitter()]
+        return super().get_permissions()
+
+    def post(self, request):
+        files = request.FILES.getlist('file')
+        if len(files) != 1:
+            message = 'Attach one image in the "file" field.' if not files else (
+                f'Send exactly one image in the "file" field; got {len(files)}. Use /api/batches/ for more.'
+            )
+            return Response({'detail': message}, status=status.HTTP_400_BAD_REQUEST)
+        upload = files[0]
+
+        product_ref = str(request.data.get('product') or '').strip()
+        if not product_ref:
+            return Response(
+                {'detail': 'Choose a product, for example P-PLATE01.'}, status=status.HTTP_400_BAD_REQUEST
+            )
+        product = find_product(product_ref)
+        if product is None:
+            return Response(
+                {'detail': f'Unknown product "{product_ref}".'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check the bytes first: an invalid upload is never stored and never reaches the model.
+        reason = validate_image(upload)
+        if reason:
+            return Response({'detail': reason}, status=status.HTTP_400_BAD_REQUEST)
+
+        item = Inspection(
+            product=product,
+            original_filename=upload.name[:255],
+            submitted_by=request.user,
+            status=Inspection.Status.QUEUED,
+        )
+        item.image.save(upload.name, upload, save=False)
+        item.save()
+
+        # Same predict-and-save code the batch worker uses, called directly: no Celery, no Redis.
+        process_inspection(item.pk)
+
+        item = visible_inspections(request.user).get(pk=item.pk)
+        if item.status != Inspection.Status.COMPLETED:
+            return Response(
+                {'detail': f'{item.failure_reason} The upload was saved as failed inspection {item.pk}.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        data = InspectionSerializer(item, context={'request': request}).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
     def get_queryset(self):
         inspections = visible_inspections(self.request.user).order_by('-created_at', '-id')
