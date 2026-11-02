@@ -1,5 +1,6 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
+ADMINISTRATOR = 'Administrator'
 ENGINEER = 'Engineer'
 SUPERVISOR = 'Supervisor'
 
@@ -20,3 +21,19 @@ class IsEngineerOrSupervisor(BasePermission):
 
     def has_permission(self, request, view):
         return in_group(request.user, ENGINEER) or in_group(request.user, SUPERVISOR)
+
+
+class IsSupervisor(BasePermission):
+    message = 'Only Supervisors can review inspections.'
+
+    def has_permission(self, request, view):
+        return in_group(request.user, SUPERVISOR)
+
+
+class IsAdministratorOrReadOnly(BasePermission):
+    message = 'Only Administrators can manage products.'
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return request.user.is_authenticated
+        return in_group(request.user, ADMINISTRATOR)
