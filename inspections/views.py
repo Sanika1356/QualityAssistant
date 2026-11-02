@@ -2,17 +2,30 @@ import logging
 
 from django.core.exceptions import SuspiciousFileOperation
 from django.db import transaction
+from django.db.models import F
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from PIL import Image, UnidentifiedImageError
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Batch, Inspection, Product
-from .permissions import SUPERVISOR, IsEngineer, IsEngineerOrSupervisor, in_group
-from .serializers import BatchSerializer
+from .permissions import (
+    SUPERVISOR,
+    IsAdministratorOrReadOnly,
+    IsEngineer,
+    IsEngineerOrSupervisor,
+    IsSupervisor,
+    in_group,
+)
+from .serializers import (
+    BatchSerializer,
+    InspectionSerializer,
+    ProductSerializer,
+    ReviewCreateSerializer,
+)
 from .tasks import process_inspection
 from .validators import validate_image
 
@@ -133,3 +146,70 @@ class InspectionImageView(APIView):
         response['Cache-Control'] = 'private, no-store'
         response['X-Content-Type-Options'] = 'nosniff'
         return response
+
+
+class ProductListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Product.objects.all().order_by('product_id')
+    serializer_class = ProductSerializer
+    permission_classes = [IsAdministratorOrReadOnly]
+
+
+def visible_inspections(user):
+    """Supervisors see every inspection. Engineers see only their own."""
+    inspections = Inspection.objects.select_related(
+        'product', 'batch', 'submitted_by', 'review', 'review__reviewer'
+    )
+    if in_group(user, SUPERVISOR):
+        return inspections
+    return inspections.filter(submitted_by=user)
+
+
+class InspectionListAPIView(generics.ListAPIView):
+    """History, filtered with ?prediction= and ?review_status=."""
+
+    serializer_class = InspectionSerializer
+    permission_classes = [IsEngineerOrSupervisor]
+
+    def get_queryset(self):
+        inspections = visible_inspections(self.request.user).order_by('-created_at', '-id')
+
+        prediction = self.request.query_params.get('prediction')
+        if prediction in Inspection.PredictedClass.values:
+            inspections = inspections.filter(predicted_class=prediction)
+
+        review_status = self.request.query_params.get('review_status')
+        if review_status == 'pending':
+            # A failed upload has no prediction, so there is nothing to review.
+            inspections = inspections.filter(status=Inspection.Status.COMPLETED, review__isnull=True)
+        elif review_status == 'confirmed':
+            inspections = inspections.filter(review__reviewed_class=F('predicted_class'))
+        elif review_status == 'corrected':
+            inspections = inspections.filter(review__isnull=False).exclude(
+                review__reviewed_class=F('predicted_class')
+            )
+        return inspections
+
+
+class InspectionDetailAPIView(generics.RetrieveAPIView):
+    serializer_class = InspectionSerializer
+    permission_classes = [IsEngineerOrSupervisor]
+
+    def get_queryset(self):
+        return visible_inspections(self.request.user)
+
+
+class InspectionReviewAPIView(APIView):
+    """Supervisors confirm or correct a completed inspection. The original output is never edited."""
+
+    permission_classes = [IsSupervisor]
+
+    def post(self, request, pk):
+        inspection = get_object_or_404(Inspection, pk=pk)
+        serializer = ReviewCreateSerializer(data=request.data, context={'inspection': inspection})
+        serializer.is_valid(raise_exception=True)
+        serializer.save(inspection=inspection, reviewer=request.user)
+        fresh = visible_inspections(request.user).get(pk=pk)
+        return Response(
+            InspectionSerializer(fresh, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )

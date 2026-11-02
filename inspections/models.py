@@ -73,3 +73,18 @@ class Inspection(models.Model):
 
     def __str__(self):
         return f'Inspection {self.pk} [{self.status}] {self.original_filename}'
+
+
+class Review(models.Model):
+    """A Supervisor's decision, kept apart from the model's original output."""
+
+    inspection = models.OneToOneField(Inspection, on_delete=models.PROTECT, related_name='review')
+    reviewed_class = models.CharField(max_length=20, choices=Inspection.PredictedClass.choices)
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='inspection_reviews'
+    )
+    comment = models.TextField(blank=True)
+    reviewed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Review for inspection {self.inspection_id}'
