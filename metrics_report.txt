@@ -1,0 +1,24 @@
+Visual Inspection - sample evaluation
+Model version: BIT-PLATE-CV-1.0 (decision threshold 0.5, unchanged)
+Images found: 60 | predicted: 60 | scored: 60 | failures: 0
+Validation folder: excluded
+
+Confusion matrix (rows = actual, columns = predicted)
+                        Normal   Defective
+     actual Normal          30           0
+  actual Defective           0          30
+
+TP (defective caught)        = 30
+FN (defective missed)        = 0
+FP (normal flagged)          = 0
+TN (normal passed)           = 30
+Defect recall = TP/(TP+FN) = 30/30 = 1.0000
+Accuracy = (TP+TN)/total = 60/60 = 1.0000
+
+Failures:
+  none - every image was processed.
+
+Misclassified images:
+  none
+
+No false negatives: every defective sample was caught. This is a small synthetic sample (60 images), so it cannot establish real-world reliability.
