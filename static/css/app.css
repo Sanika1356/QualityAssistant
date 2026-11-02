@@ -1,0 +1,471 @@
+/* Visual Inspection — shared look. Bootstrap 5 does the layout; this file sets the palette. */
+
+:root {
+  /* Palette: calm steel blues and neutral greys. */
+  --vi-ink: #17212b;          /* main text */
+  --vi-ink-muted: #556270;    /* secondary text, passes 4.5:1 on white */
+  --vi-steel-900: #1b2a38;    /* header */
+  --vi-steel-700: #2c4a66;
+  --vi-steel-600: #345b80;    /* primary actions */
+  --vi-steel-500: #4673a0;
+  --vi-steel-100: #e4ecf4;
+  --vi-surface: #f3f5f8;      /* page background */
+  --vi-card: #ffffff;
+  --vi-line: #d9e0e7;
+  --vi-focus: #f0b429;        /* keyboard focus ring: amber, visible on light and dark */
+
+  /* Results: colour AND text/icon, never colour alone. */
+  --vi-normal-fg: #17603f;
+  --vi-normal-bg: #e3f3ea;
+  --vi-normal-line: #9fd2b6;
+  --vi-defect-fg: #a01d1d;
+  --vi-defect-bg: #fbe8e6;
+  --vi-defect-line: #eeb1aa;
+
+  --vi-radius: 0.75rem;
+
+  /* Bootstrap hooks */
+  --bs-body-font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --bs-body-color: var(--vi-ink);
+  --bs-body-bg: var(--vi-surface);
+  --bs-secondary-color: var(--vi-ink-muted);
+  --bs-border-color: var(--vi-line);
+  --bs-border-radius: 0.5rem;
+  --bs-link-color: var(--vi-steel-600);
+  --bs-link-color-rgb: 52, 91, 128;
+  --bs-link-hover-color: var(--vi-steel-700);
+  --bs-link-hover-color-rgb: 44, 74, 102;
+  --bs-primary: var(--vi-steel-600);
+  --bs-primary-rgb: 52, 91, 128;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--vi-surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .h1, .h2, .h3 {
+  letter-spacing: -0.01em;
+  font-weight: 650;
+  color: var(--vi-ink);
+}
+
+/* ---------- Keyboard focus: always visible ---------- */
+:focus-visible,
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.nav-link:focus-visible,
+.navbar-toggler:focus-visible {
+  outline: 3px solid var(--vi-focus) !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
+.form-control,
+.form-select {
+  background-color: #fff;
+}
+.form-control:focus,
+.form-select:focus {
+  background-color: #fff;
+  border-color: var(--vi-steel-500);
+  box-shadow: 0 0 0 0.2rem rgba(70, 115, 160, 0.2);
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  z-index: 1100;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: var(--vi-focus);
+  color: var(--vi-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 0.75rem;
+}
+
+/* ---------- Buttons: rounded ---------- */
+.btn {
+  --bs-btn-border-radius: 999px;
+  --bs-btn-padding-x: 1.1rem;
+  --bs-btn-font-weight: 600;
+}
+.btn-sm {
+  --bs-btn-padding-x: 0.85rem;
+}
+.btn-primary {
+  --bs-btn-bg: var(--vi-steel-600);
+  --bs-btn-border-color: var(--vi-steel-600);
+  --bs-btn-hover-bg: var(--vi-steel-700);
+  --bs-btn-hover-border-color: var(--vi-steel-700);
+  --bs-btn-active-bg: var(--vi-steel-900);
+  --bs-btn-active-border-color: var(--vi-steel-900);
+  --bs-btn-disabled-bg: var(--vi-steel-500);
+  --bs-btn-disabled-border-color: var(--vi-steel-500);
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--vi-steel-600);
+  --bs-btn-border-color: var(--vi-steel-600);
+  --bs-btn-hover-bg: var(--vi-steel-600);
+  --bs-btn-hover-border-color: var(--vi-steel-600);
+  --bs-btn-active-bg: var(--vi-steel-700);
+}
+
+/* ---------- Header ---------- */
+.app-header {
+  background: var(--vi-steel-900);
+  border-bottom: 3px solid var(--vi-steel-600);
+}
+.app-header .navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #fff;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.app-header .brand-sub {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #b9c7d6;
+  letter-spacing: 0.02em;
+}
+.app-header .nav-link {
+  color: #d3dde7;
+  border-radius: 999px;
+  padding-inline: 0.9rem !important;
+}
+.app-header .nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+.app-header .nav-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+.app-header .navbar-toggler {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.app-header .navbar-toggler-icon {
+  filter: invert(1);
+}
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #e9eff5;
+  font-size: 0.9rem;
+}
+.role-badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--vi-steel-100);
+  color: var(--vi-steel-900);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+/* ---------- Brand mark (a plate with four mounting holes) ---------- */
+.brand-mark {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+}
+
+/* ---------- Page layout ---------- */
+.app-main {
+  flex: 1 0 auto;
+  padding-block: 2rem 3rem;
+}
+.app-main:focus {
+  outline: none;
+}
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.page-head h1 {
+  font-size: 1.6rem;
+  margin: 0;
+}
+.page-head .lead-text {
+  margin: 0.25rem 0 0;
+  color: var(--vi-ink-muted);
+}
+
+.panel {
+  background: var(--vi-card);
+  border: 1px solid var(--vi-line);
+  border-radius: var(--vi-radius);
+  box-shadow: 0 1px 2px rgba(23, 33, 43, 0.04);
+}
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--vi-line);
+}
+.panel-head h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+.panel-body {
+  padding: 1.25rem;
+}
+.muted {
+  color: var(--vi-ink-muted);
+}
+
+/* Tables */
+.table-vi {
+  margin: 0;
+  --bs-table-bg: transparent;
+}
+.table-vi thead th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--vi-ink-muted);
+  font-weight: 650;
+  background: #f8fafc;
+  border-bottom-color: var(--vi-line);
+  white-space: nowrap;
+}
+.table-vi td,
+.table-vi th {
+  padding: 0.8rem 1.25rem;
+  vertical-align: middle;
+}
+.code-id {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.9rem;
+  background: var(--vi-steel-100);
+  color: var(--vi-steel-900);
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.35rem;
+}
+
+.empty-state {
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+  color: var(--vi-ink-muted);
+}
+
+/* ---------- Result badges for Person 4 ----------
+   <span class="result result-normal">Normal</span>
+   <span class="result result-defective">Defective</span>
+   The icon is drawn by CSS; the word is always in the markup. */
+.result {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.7rem 0.2rem 0.55rem;
+  border: 1px solid;
+  border-radius: 999px;
+  font-weight: 650;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.result::before {
+  font-weight: 800;
+  line-height: 1;
+}
+.result-normal {
+  color: var(--vi-normal-fg);
+  background: var(--vi-normal-bg);
+  border-color: var(--vi-normal-line);
+}
+.result-normal::before {
+  content: "\2713"; /* check mark */
+}
+.result-defective {
+  color: var(--vi-defect-fg);
+  background: var(--vi-defect-bg);
+  border-color: var(--vi-defect-line);
+}
+.result-defective::before {
+  content: "!";
+  display: inline-grid;
+  place-items: center;
+  width: 1.05em;
+  height: 1.05em;
+  border-radius: 50%;
+  background: var(--vi-defect-fg);
+  color: #fff;
+  font-size: 0.75em;
+}
+
+/* ---------- Teammate placeholder ---------- */
+.handoff {
+  border: 2px dashed var(--vi-steel-500);
+  border-radius: var(--vi-radius);
+  background: repeating-linear-gradient(
+    -45deg, #f7f9fc, #f7f9fc 12px, #eef3f8 12px, #eef3f8 24px
+  );
+  padding: 1.5rem;
+}
+.handoff-tag {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: var(--vi-steel-900);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+}
+.handoff code {
+  color: var(--vi-steel-900);
+}
+
+/* ---------- Login ---------- */
+.login-body {
+  background:
+    radial-gradient(1200px 500px at 0% 0%, #2c4a66 0%, transparent 60%),
+    linear-gradient(160deg, #1b2a38 0%, #22384d 55%, #2c4a66 100%);
+}
+.login-wrap {
+  flex: 1 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+}
+.login-card {
+  width: 100%;
+  max-width: 56rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: var(--vi-card);
+  box-shadow: 0 20px 50px rgba(8, 15, 24, 0.35);
+}
+.login-intro {
+  padding: 2rem;
+  color: #e6edf4;
+  background:
+    linear-gradient(0deg, rgba(27, 42, 56, 0.92), rgba(27, 42, 56, 0.92)),
+    repeating-linear-gradient(90deg, #3a5a78 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(0deg, #3a5a78 0 1px, transparent 1px 22px);
+}
+.login-intro h1 {
+  color: #fff;
+  font-size: 1.5rem;
+  margin: 1.25rem 0 0.75rem;
+}
+.login-intro p {
+  color: #c4d1de;
+  margin-bottom: 1.25rem;
+}
+.login-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.login-steps li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  color: #dbe4ed;
+}
+.login-steps .step-no {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  border: 1px solid #7e9bb8;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: #fff;
+}
+.login-form {
+  padding: 2rem;
+}
+.login-form h2 {
+  font-size: 1.35rem;
+  margin-bottom: 0.25rem;
+}
+.login-form .form-control {
+  padding: 0.65rem 0.9rem;
+}
+@media (min-width: 768px) {
+  .login-card {
+    grid-template-columns: 1.05fr 1fr;
+  }
+  .login-intro,
+  .login-form {
+    padding: 2.75rem;
+  }
+}
+
+/* ---------- Error page ---------- */
+.error-card {
+  max-width: 34rem;
+  margin: 2rem auto;
+  text-align: center;
+}
+.error-code {
+  display: inline-block;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-weight: 700;
+  color: var(--vi-steel-600);
+  background: var(--vi-steel-100);
+  border-radius: 999px;
+  padding: 0.2rem 0.8rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 767.98px) {
+  /* Keep the sign-in form near the top on phones. */
+  .login-steps {
+    display: none;
+  }
+  .login-intro {
+    padding: 1.5rem 1.5rem 1.25rem;
+  }
+  .login-intro h1 {
+    margin-top: 0.9rem;
+    font-size: 1.3rem;
+  }
+  .login-intro p {
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .app-main {
+    padding-block: 1.25rem 2rem;
+  }
+  .table-vi td,
+  .table-vi th {
+    padding: 0.7rem 0.9rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

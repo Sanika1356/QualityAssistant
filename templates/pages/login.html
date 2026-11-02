@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Sign in{% endblock %}
+{% block body_class %}login-body{% endblock %}
+{% block header %}{% endblock %}
+
+{% block main %}
+<main id="main" class="login-wrap" tabindex="-1">
+  <div class="login-card">
+    <section class="login-intro" aria-labelledby="intro-title">
+      <div class="d-flex align-items-center gap-2 fw-semibold text-white">
+        {% include "partials/brand_mark.html" %}
+        Visual Inspection
+      </div>
+      <h1 id="intro-title">Metal plate quality check</h1>
+      <p>Upload plate images, see whether each plate is normal or defective, and have a supervisor confirm the result.</p>
+      <ol class="login-steps">
+        <li><span class="step-no">1</span><span>Engineers upload a batch of up to 10 plate images.</span></li>
+        <li><span class="step-no">2</span><span>The model checks every image and marks it normal or defective.</span></li>
+        <li><span class="step-no">3</span><span>Supervisors review results and correct them when needed.</span></li>
+      </ol>
+    </section>
+
+    <section class="login-form" aria-labelledby="login-title">
+      <h2 id="login-title">Sign in</h2>
+      <p class="muted mb-4">Use the account your administrator gave you.</p>
+
+      <div id="login-alert" hidden></div>
+
+      <form id="login-form" novalidate>
+        <div class="mb-3">
+          <label class="form-label" for="username">Username</label>
+          <input class="form-control" id="username" name="username" type="text"
+                 autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+        </div>
+        <div class="mb-4">
+          <label class="form-label" for="password">Password</label>
+          <input class="form-control" id="password" name="password" type="password"
+                 autocomplete="current-password" required>
+        </div>
+        <button class="btn btn-primary w-100 py-2" type="submit">Sign in</button>
+      </form>
+    </section>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/login.js' %}"></script>
+{% endblock %}

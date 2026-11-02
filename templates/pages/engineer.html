@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Inspections{% endblock %}
+
+{# Page shell: the login/role check is done in inspections/pages.py.
+   Person 4 edits templates/screens/engineer_screen.html only. #}
+{% block content %}
+{% include "screens/engineer_screen.html" %}
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}No access{% endblock %}
+
+{% block content %}
+<section class="panel error-card" aria-labelledby="error-title">
+  <div class="panel-body p-4 p-md-5">
+    <span class="error-code">403</span>
+    <h1 id="error-title" class="h3">You can't open this page</h1>
+    <p class="muted mb-4">
+      {% if exception %}{{ exception }}{% else %}Your account doesn't have access to this page.{% endif %}
+    </p>
+    <div class="d-flex flex-wrap justify-content-center gap-2">
+      {% if dashboard_url %}
+        <a class="btn btn-primary" href="{{ dashboard_url }}">Go to my page</a>
+      {% endif %}
+      {% if request.user.is_authenticated %}
+        <button type="button" class="btn btn-outline-primary" data-action="sign-out">Sign in as someone else</button>
+      {% else %}
+        <a class="btn btn-primary" href="{% url 'login' %}">Sign in</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

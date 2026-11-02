@@ -1,0 +1,29 @@
+{% load static %}
+<div class="page-head">
+  <div>
+    <h1>Inspections</h1>
+    <p class="lead-text">Upload plate images and follow their results.</p>
+  </div>
+</div>
+
+{# ===== PLACEHOLDER: Person 4 replaces everything in this file with the Engineer screen. ===== #}
+<section class="handoff" aria-labelledby="engineer-handoff-title" data-placeholder="person-4-engineer">
+  <span class="handoff-tag">Placeholder · Person 4</span>
+  <h2 id="engineer-handoff-title" class="h5">Engineer screen goes here</h2>
+  <p class="mb-3">Person 4 builds the batch upload and history screen in this file:
+    <code>templates/screens/engineer_screen.html</code>, with its script in
+    <code>static/js/screens/engineer.js</code>.</p>
+  <p class="mb-2 fw-semibold">APIs for this screen</p>
+  <ul class="mb-3">
+    <li><code>POST /api/batches/</code>: <code>product</code> and 1 to 10 <code>files</code></li>
+    <li><code>GET /api/batches/&lt;id&gt;/</code>: poll until nothing is queued or processing</li>
+    <li><code>GET /api/inspections/</code>: history of your own inspections</li>
+    <li><code>image_url</code> on each item: use it as an <code>&lt;img src&gt;</code></li>
+  </ul>
+  <p class="mb-2 fw-semibold">Result styles</p>
+  <div class="d-flex flex-wrap gap-2">
+    <span class="result result-normal">Normal</span>
+    <span class="result result-defective">Defective</span>
+  </div>
+</section>
+{# ===== END PLACEHOLDER ===== #}
