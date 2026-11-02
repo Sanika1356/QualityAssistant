@@ -16,6 +16,10 @@ class IsEngineer(BasePermission):
         return in_group(request.user, ENGINEER)
 
 
+class IsEngineerSubmitter(IsEngineer):
+    message = 'Only Engineers can submit inspections.'
+
+
 class IsEngineerOrSupervisor(BasePermission):
     message = 'Only Engineers and Supervisors can view batches.'
 

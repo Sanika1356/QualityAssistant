@@ -53,13 +53,37 @@ corrects the result.
 |--------|----------|---------|
 | GET, POST | /api/products/ | List and manage products |
 | GET | /api/inspections/ | View inspection history |
+| POST | /api/inspections/ | Inspect one image now (Engineers only) |
 | GET | /api/inspections/<id>/ | View inspection details |
 | POST | /api/inspections/<id>/review/ | Submit Supervisor review |
 | GET | /api/inspections/<id>/image/ | View the saved image, with access checks |
 | POST | /api/batches/ | Submit 1 to 10 images for background inspection |
 | GET | /api/batches/<id>/ | Follow each batch item's status |
 
-The single-image endpoint is to be integrated by its project module.
+## Single-Image Inspection
+
+The validate-then-predict flow for one image was designed by Person 2.
+
+`POST /api/inspections/` takes `multipart/form-data` with:
+
+- `product`: the product ID, for example `P-PLATE01`
+- `file`: exactly one JPEG or PNG image
+
+What happens:
+
+1. Only Engineers may submit. Supervisors, Administrators and users
+   without a role get 403.
+2. The image is checked by `validate_image` (real JPEG/PNG content,
+   at most 5 MiB, each side 64 to 4096 pixels, fully decoded).
+   An invalid upload gets 400 with the reason. Nothing is stored and
+   the model never sees it.
+3. A valid image is saved under a random file name and the model runs
+   straight away in the same request (no Celery or Redis needed).
+4. The reply is 201 with the full inspection record, including
+   `image_url`. If the model itself fails, the record is saved as
+   `failed` and the reply is 500 with a short reason.
+
+The prediction uses only the image content, never the file name.
 
 ## History Filters
 
