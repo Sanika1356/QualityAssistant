@@ -1,0 +1,65 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Visual Inspection{% endblock %} · Visual Inspection</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap-5.3.3/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {# Loaded in <head> so api() is ready for any page or screen script. #}
+  <script src="{% static 'js/api.js' %}"></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  {% block header %}
+  <header class="app-header">
+    <nav class="navbar navbar-expand-md navbar-dark" aria-label="Main">
+      <div class="container-lg">
+        <a class="navbar-brand" href="{% url 'home' %}">
+          {% include "partials/brand_mark.html" %}
+          <span>Visual Inspection<span class="brand-sub">Metal plate quality check</span></span>
+        </a>
+        {% if current_role %}
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav"
+                aria-controls="main-nav" aria-expanded="false" aria-label="Show menu">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="main-nav">
+          <ul class="navbar-nav me-auto mt-2 mt-md-0 ms-md-3 gap-1">
+            {% for label, url in nav_links %}
+            <li class="nav-item">
+              <a class="nav-link{% if request.path == url %} active{% endif %}" href="{{ url }}"
+                 {% if request.path == url %}aria-current="page"{% endif %}>{{ label }}</a>
+            </li>
+            {% endfor %}
+          </ul>
+          <div class="d-flex flex-wrap align-items-center gap-3 py-2 py-md-0">
+            <span class="user-chip">
+              <span class="visually-hidden">Signed in as</span>
+              <span data-testid="username">{{ request.user.username }}</span>
+              <span class="role-badge" data-testid="role">{{ current_role }}</span>
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-light" data-action="sign-out">Sign out</button>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+  {% endblock %}
+
+  {% block main %}
+  <main id="main" class="app-main" tabindex="-1">
+    <div class="container-lg">
+      <div id="page-alert" hidden></div>
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+  {% endblock %}
+
+  <script src="{% static 'vendor/bootstrap-5.3.3/js/bootstrap.bundle.min.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -4,3 +4,4 @@ media/
 dump.rdb
 __pycache__/
 *.pyc
+staticfiles/

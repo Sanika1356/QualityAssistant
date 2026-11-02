@@ -1,0 +1,29 @@
+{% load static %}
+<div class="page-head">
+  <div>
+    <h1>Review</h1>
+    <p class="lead-text">Check model results and confirm or correct them.</p>
+  </div>
+</div>
+
+{# ===== PLACEHOLDER: Person 4 replaces everything in this file with the Supervisor screen. ===== #}
+<section class="handoff" aria-labelledby="supervisor-handoff-title" data-placeholder="person-4-supervisor">
+  <span class="handoff-tag">Placeholder · Person 4</span>
+  <h2 id="supervisor-handoff-title" class="h5">Supervisor screen goes here</h2>
+  <p class="mb-3">Person 4 builds the review queue and history screen in this file:
+    <code>templates/screens/supervisor_screen.html</code>, with its script in
+    <code>static/js/screens/supervisor.js</code>.</p>
+  <p class="mb-2 fw-semibold">APIs for this screen</p>
+  <ul class="mb-3">
+    <li><code>GET /api/inspections/?review_status=pending</code>: items waiting for review</li>
+    <li><code>GET /api/inspections/?prediction=Defective</code>: filter by model result</li>
+    <li><code>POST /api/inspections/&lt;id&gt;/review/</code>: <code>reviewed_class</code> and <code>comment</code></li>
+    <li><code>image_url</code> on each item: use it as an <code>&lt;img src&gt;</code></li>
+  </ul>
+  <p class="mb-2 fw-semibold">Result styles</p>
+  <div class="d-flex flex-wrap gap-2">
+    <span class="result result-normal">Normal</span>
+    <span class="result result-defective">Defective</span>
+  </div>
+</section>
+{# ===== END PLACEHOLDER ===== #}
