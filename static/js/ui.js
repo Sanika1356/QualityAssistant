@@ -248,7 +248,7 @@
           el('div', {}, el('div', { class: 'file-name', text: item.original_filename }),
             el('div', { class: 'sub', text: `#${item.id} · ${when(item.created_at)}` })))),
         el('td', {}, resultBadge(item.predicted_class)),
-        el('td', { class: 'num', text: item.status === 'completed' ? percent(item.confidence) : '—' }),
+        el('td', { class: 'num col-optional', text: item.status === 'completed' ? percent(item.confidence) : '—' }),
         el('td', {}, statusChip(item.status),
           item.status === 'failed' && item.failure_reason ? el('div', { class: 'reason mt-1', text: item.failure_reason }) : null),
         el('td', {}, reviewChip(item)),
@@ -265,8 +265,10 @@
       return el('tr', { dataset: { id: item.id } }, cells);
     });
     return el('div', { class: 'table-responsive' },
-      el('table', { class: 'table table-vi' },
-        el('thead', {}, el('tr', {}, head.map((h) => el('th', { scope: 'col', text: h })))),
+      el('table', { class: `table table-vi${options.onOpen ? ' table-actions' : ''}` },
+        el('thead', {}, el('tr', {}, head.map((h) => el('th', {
+          scope: 'col', text: h, class: h === 'Confidence' ? 'col-optional' : null,
+        })))),
         el('tbody', {}, rows)));
   }
 

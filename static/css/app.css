@@ -822,6 +822,41 @@ h1, h2, h3, .h1, .h2, .h3 {
   max-width: 24rem;
 }
 
+/* History tables with a View/Review button: the button column must never be cut off. */
+.table-actions th,
+.table-actions td {
+  padding-inline: 0.75rem;
+}
+.table-actions th:first-child,
+.table-actions td:first-child {
+  padding-left: 1.25rem;
+}
+.table-actions .cell-file {
+  min-width: 11rem;
+}
+.table-actions .reason {
+  min-width: 0;
+  max-width: 16rem;
+}
+/* Pinned to the right edge of the table box, so it stays visible even when the table scrolls. */
+.table-actions th:last-child,
+.table-actions td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  padding-right: 1.25rem;
+  background: var(--vi-card);
+  box-shadow: -10px 0 10px -10px rgba(23, 33, 43, 0.3);
+}
+.table-actions thead th:last-child {
+  background: #f8fafc;
+}
+@media (max-width: 1199.98px) {
+  .table-actions .col-optional {
+    display: none;
+  }
+}
+
 /* ---------- Toolbars, filters, summaries ---------- */
 .toolbar {
   display: flex;
@@ -995,6 +1030,14 @@ h1, h2, h3, .h1, .h2, .h3 {
   aspect-ratio: 1 / 1;
   object-fit: contain;
   border-radius: 0.4rem;
+}
+
+/* Keep "Save review" in view inside the scrolling dialog on short laptop screens. */
+#inspection-dialog form.detail-block > button[type="submit"] {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 2;
+  box-shadow: 0 0 0 6px var(--vi-card);
 }
 
 /* Review choices */
