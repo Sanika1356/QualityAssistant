@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework import serializers
 
-from .models import Batch, Inspection, Product, Review
+from .models import Batch, Incident, Inspection, Product, Review
 
 
 class BatchItemSerializer(serializers.ModelSerializer):
@@ -95,4 +95,107 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Only completed inspections can be reviewed.')
         if Review.objects.filter(inspection=inspection).exists():
             raise serializers.ValidationError('This inspection has already been reviewed.')
+        return attrs
+
+
+
+# Round 3: Incident serializers
+
+class IncidentSerializer(serializers.ModelSerializer):
+    inspection_id = serializers.IntegerField(read_only=True)
+    created_by = serializers.CharField(source='created_by.username', read_only=True)
+    reviewer = serializers.CharField(
+        source='reviewer.username',
+        read_only=True,
+        allow_null=True
+    )
+
+    human_correction = serializers.SerializerMethodField()
+
+    # The saved Round 2 inspection the incident came from.
+    inspection_image_url = serializers.SerializerMethodField()
+    inspection_original_filename = serializers.CharField(
+        source='inspection.original_filename', read_only=True
+    )
+    inspection_inspected_at = serializers.DateTimeField(source='inspection.created_at', read_only=True)
+    inspection_submitted_by = serializers.CharField(
+        source='inspection.submitted_by.username', read_only=True
+    )
+
+    def get_inspection_image_url(self, incident):
+        # Same access-checked endpoint as Round 2, never the raw media file.
+        return BatchItemSerializer(context=self.context).get_image_url(incident.inspection)
+
+    def get_human_correction(self, incident):
+        # Shown apart from the classifier's original result; it never changes it.
+        from .sop_assistant import build_human_correction
+
+        return build_human_correction(incident.inspection)
+
+    class Meta:
+        model = Incident
+        fields = [
+            'incident_id',
+            'inspection_id',
+            'inspection_image_url',
+            'inspection_original_filename',
+            'inspection_inspected_at',
+            'inspection_submitted_by',
+            'product_id_snapshot',
+            'product_name_snapshot',
+            'original_prediction',
+            'human_correction',
+            'original_confidence',
+            'original_defect_probability',
+            'model_version_snapshot',
+            'summary',
+            'actions',
+            'sources',
+            'evidence_status',
+            'evidence_reason',
+            'manual_review_required',
+            'created_by',
+            'created_at',
+            'updated_at',
+            'decision',
+            'reviewer',
+            'review_comment',
+            'reviewed_at',
+        ]
+        read_only_fields = fields
+
+
+class IncidentCreateSerializer(serializers.Serializer):
+    inspection_id = serializers.IntegerField(min_value=1)
+
+
+class IncidentDecisionSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(
+        choices=[
+            Incident.Decision.APPROVED,
+            Incident.Decision.NEEDS_MORE_INFO,
+        ]
+    )
+    review_comment = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        trim_whitespace=True
+    )
+
+    def validate(self, attrs):
+        incident = self.context['incident']
+
+        if (
+            attrs['decision'] == Incident.Decision.APPROVED
+            and incident.evidence_status != Incident.EvidenceStatus.SUFFICIENT
+        ):
+            raise serializers.ValidationError({
+                'decision': 'An incident with insufficient evidence cannot be approved.'
+            })
+
+        if incident.decision != Incident.Decision.PENDING:
+            raise serializers.ValidationError(
+                'This incident has already received a decision.'
+            )
+
         return attrs

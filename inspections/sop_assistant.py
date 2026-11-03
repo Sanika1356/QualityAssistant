@@ -20,6 +20,8 @@ Safety steps, in order:
   3. The AI may only propose actions that cite passage numbers. Code rejects
      actions with missing or invented citations, other documents or forbidden
      claims, retries once, and builds source details from the real passages.
+  4. The kept actions must together cite every required SOP, otherwise the
+     AI is asked once more and then the result is Insufficient.
 Any failure gives Insufficient with empty actions. There is no fallback to the
 AI's general knowledge.
 """
@@ -112,11 +114,22 @@ def _lot_reference(inspection):
     return 'Not provided'
 
 
+def format_percent(value):
+    """Same rule as percent() in static/js/ui.js: never print 100%."""
+    if value is None:
+        return 'Not recorded'
+    pct = float(value) * 100
+    # The model is uncalibrated and never truly certain.
+    if pct >= 99.95:
+        return '> 99.9%'
+    if pct < 0.05:
+        return '< 0.1%'
+    return f'{pct:.1f}%'
+
+
 def build_summary(inspection):
     product = inspection.product
-    confidence = (
-        f'{inspection.confidence * 100:.1f}%' if inspection.confidence is not None else 'Not recorded'
-    )
+    confidence = format_percent(inspection.confidence)
     return (
         f'Inspection {inspection.pk} of product {product.product_id} ({product.name}), '
         f'submitted by {inspection.submitted_by.get_username()} at {_format_time(inspection.created_at)}, '
@@ -269,6 +282,21 @@ def _source(passage, number):
     }
 
 
+def _required_ids(product_id, rows):
+    """Document IDs every Sufficient result must cite."""
+    mapped = {
+        row['document_id'] for row in rows
+        if row.get('required', 'true').lower() not in ('false', '0', 'no')
+    }
+    return mapped | REQUIRED_DOCUMENTS.get(product_id, set())
+
+
+def _uncited_documents(actions, passages, required_ids):
+    """Required document IDs that no valid action cites, sorted."""
+    cited = {passages[n - 1].document_id for _, numbers in actions for n in numbers}
+    return sorted(required_ids - cited)
+
+
 def _check_reply(reply, passages, allowed_ids, all_mapping_ids):
     """Return (valid actions, number of rejected actions)."""
     reply = normalize_reply(reply)
@@ -327,15 +355,22 @@ def generate_incident_content(inspection):
         return result
 
     allowed_ids = {row['document_id'] for row in rows} | {product_id}
+    required_ids = _required_ids(product_id, rows)
     prompt = build_user_prompt(result['summary'], passages)
 
     try:
         actions, rejected = _check_reply(llm.generate(SYSTEM_PROMPT, prompt), passages, allowed_ids, all_mapping_ids)
-        if rejected or not actions:
+        uncited = _uncited_documents(actions, passages, required_ids)
+        if rejected or not actions or uncited:
             # Ask once more, then use only actions that pass every check.
-            actions, rejected = _check_reply(
-                llm.generate(SYSTEM_PROMPT, prompt + CITATION_REMINDER), passages, allowed_ids, all_mapping_ids
+            reminder = CITATION_REMINDER + (
+                f' Together the actions must cite at least one passage from each of: '
+                f'{", ".join(sorted(required_ids))}.'
             )
+            actions, rejected = _check_reply(
+                llm.generate(SYSTEM_PROMPT, prompt + reminder), passages, allowed_ids, all_mapping_ids
+            )
+            uncited = _uncited_documents(actions, passages, required_ids)
     except llm.LLMUnavailable as error:
         result['evidence_reason'] = f'{error} Manual quality review is required.'
         return result
@@ -351,6 +386,13 @@ def generate_incident_content(inspection):
         )
         return result
 
+    if uncited:
+        result['evidence_reason'] = (
+            f'The suggested actions did not cite every required SOP '
+            f'(no supported action from {", ".join(uncited)}). Manual quality review is required.'
+        )
+        return result
+
     sources_by_number = {}
     for text, numbers in actions:
         action_sources = []
@@ -363,7 +405,7 @@ def generate_incident_content(inspection):
     documents = ', '.join(f"{row['document_id']} revision {row['revision']}" for row in rows)
     result['evidence_status'] = SUFFICIENT
     result['evidence_reason'] = (
-        f'Relevant passages were found in every mapped SOP ({documents}) and each action cites them.'
+        f'Relevant passages were found in every mapped SOP ({documents}), and the actions cite each of them.'
     )
     if rejected:
         result['evidence_reason'] += f' {rejected} unsupported action(s) were removed.'

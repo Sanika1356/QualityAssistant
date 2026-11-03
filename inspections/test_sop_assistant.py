@@ -18,9 +18,15 @@ from .models import Inspection, Product, Review
 
 REAL_PACK = Path(settings.BASE_DIR) / 'pack_data'
 
+# With the hash backend, passages 1 and 2 are from Q-PLATE-01 and passage 3
+# is from Q-PLATE-02, so this reply cites both required plate SOPs.
 GOOD_REPLY = (
     'ACTION: Record a proposed quality hold for the inspected item pending Supervisor review [1]\n'
-    'ACTION: Request a Supervisor review of the image and inspection record [2]'
+    'ACTION: Request a Supervisor review of the image and inspection record [3]'
+)
+ONLY_PLATE_01_REPLY = (
+    'ACTION: Record a proposed quality hold for the inspected item pending Supervisor review [1]\n'
+    'ACTION: Request a clearer inspection image through the normal workflow [2]'
 )
 
 
@@ -200,6 +206,32 @@ class ReplyCheckTests(SopTestBase):
         self.assertNotIn('\u202f', result['actions'][0]['text'])
         self.assertNotIn('【', str(result))
 
+    def test_test_passages_are_in_the_expected_documents(self):
+        # GOOD_REPLY and ONLY_PLATE_01_REPLY rely on this order.
+        passages, _ = sop_assistant.retrieve('P-PLATE01')
+        self.assertEqual([p.document_id for p in passages[:3]], ['Q-PLATE-01', 'Q-PLATE-01', 'Q-PLATE-02'])
+
+    def test_actions_must_cite_both_plate_sops(self):
+        result, fake = self.run_with_reply(GOOD_REPLY)
+        self.assertEqual(fake.call_count, 1)
+        self.assertEqual(result['evidence_status'], 'Sufficient')
+        cited = {s['document_id'] for a in result['actions'] for s in a['sources']}
+        self.assertEqual(cited, {'Q-PLATE-01', 'Q-PLATE-02'})
+
+    def test_missing_plate_02_citation_retries_then_succeeds(self):
+        result, fake = self.run_with_reply(ONLY_PLATE_01_REPLY, GOOD_REPLY)
+        self.assertEqual(fake.call_count, 2)
+        self.assertIn('Q-PLATE-02', fake.call_args_list[1][0][1])  # the retry names the missing SOP
+        self.assertEqual(result['evidence_status'], 'Sufficient')
+
+    def test_missing_plate_02_citation_twice_gives_insufficient(self):
+        result, fake = self.run_with_reply(ONLY_PLATE_01_REPLY, ONLY_PLATE_01_REPLY)
+        self.assertEqual(fake.call_count, 2)
+        self.assert_insufficient(result)
+        self.assertEqual(result['sources'], [])
+        self.assertIn('Q-PLATE-02', result['evidence_reason'])
+        self.assertIn('Manual quality review is required', result['evidence_reason'])
+
     def test_refusal_gives_insufficient(self):
         result, _ = self.run_with_reply('NOT_ENOUGH_INFORMATION', 'NOT_ENOUGH_INFORMATION')
         self.assert_insufficient(result)
@@ -283,6 +315,22 @@ class SummaryAndRecordTests(SopTestBase):
             self.assertIn(fact, summary)
         self.assertNotIn('confirmed', summary.lower())
         self.assertIsNone(result['human_correction'])
+
+    def test_confidence_never_printed_as_100_percent(self):
+        cases = [
+            (1.0, '> 99.9%'), (0.9999999999999996, '> 99.9%'), (0.9995, '> 99.9%'),
+            (0.9994, '99.9%'), (0.97, '97.0%'), (0.0005, '0.1%'), (0.0004, '< 0.1%'),
+            (0.0, '< 0.1%'), (None, 'Not recorded'),
+        ]
+        for value, expected in cases:
+            with self.subTest(value=value):
+                self.assertEqual(sop_assistant.format_percent(value), expected)
+
+        self.inspection = self.make_inspection(self.plate, confidence=1.0)
+        summary = sop_assistant.build_summary(self.inspection)
+        self.assertIn('confidence > 99.9%', summary)
+        self.assertNotIn('100.0%', summary)
+        self.assertNotIn('100%', summary)
 
     def test_human_correction_kept_separate_and_nothing_overwritten(self):
         supervisor = User.objects.create_user(username='sup', password='pass12345')

@@ -290,3 +290,236 @@ class InspectionReviewAPIView(APIView):
             InspectionSerializer(fresh, context={'request': request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+# ================= ROUND 3: INCIDENT APIs =================
+
+from django.db import transaction
+from django.utils import timezone
+
+from .models import Incident
+from .permissions import (
+    IsIncidentEngineer,
+    IsIncidentSupervisor,
+    CanViewIncidents,
+    has_exact_incident_role,
+    ENGINEER,
+)
+from .serializers import (
+    IncidentSerializer,
+    IncidentCreateSerializer,
+    IncidentDecisionSerializer,
+)
+
+
+def generate_safe_incident_content(inspection):
+    """
+    Connects Person 3's AI/SOP function.
+    Missing or failed evidence produces an Insufficient incident.
+    """
+    try:
+        from .sop_assistant import generate_incident_content
+
+        content = generate_incident_content(inspection)
+
+        if not isinstance(content, dict):
+            raise ValueError("AI generation returned an invalid response.")
+
+        actions = content.get("actions", [])
+        sources = content.get("sources", [])
+
+        # Only accept recommendations supported by identifiable citations.
+        valid_actions = (
+            isinstance(actions, list)
+            and len(actions) > 0
+            and all(
+                isinstance(action, dict)
+                and str(action.get("text", "")).strip()
+                and isinstance(action.get("sources"), list)
+                and len(action["sources"]) > 0
+                and all(
+                    isinstance(source, dict)
+                    and source.get("document_id")
+                    and source.get("revision")
+                    and source.get("page_number") is not None
+                    and source.get("passage")
+                    for source in action["sources"]
+                )
+                for action in actions
+            )
+        )
+
+        if (
+            content.get("evidence_status") == "Sufficient"
+            and valid_actions
+            and isinstance(sources, list)
+            and len(sources) > 0
+        ):
+            return {
+                "evidence_status": Incident.EvidenceStatus.SUFFICIENT,
+                "evidence_reason": content.get("evidence_reason", ""),
+                "summary": content.get("summary", ""),
+                "actions": actions,
+                "sources": sources,
+            }
+
+        return {
+            "evidence_status": Incident.EvidenceStatus.INSUFFICIENT,
+            "evidence_reason": (
+                content.get("evidence_reason")
+                or "The available SOP evidence does not sufficiently support proposed actions."
+            ),
+            # Keep the factual summary; only the suggested actions are withheld.
+            "summary": content.get("summary", ""),
+            "actions": [],
+            "sources": [],
+        }
+
+    except Exception:
+        logger.exception("Incident evidence generation failed.")
+        return {
+            "evidence_status": Incident.EvidenceStatus.INSUFFICIENT,
+            # The detail is in the log; never show internal errors or keys to users.
+            "evidence_reason": "SOP evidence or AI generation is unavailable.",
+            "summary": "",
+            "actions": [],
+            "sources": [],
+        }
+
+
+class IncidentListCreateAPIView(APIView):
+    """Engineers create incidents; Engineers and Supervisors can list incidents."""
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsIncidentEngineer()]
+        return [CanViewIncidents()]
+
+    def get(self, request):
+        incidents = Incident.objects.select_related(
+            "inspection__submitted_by", "inspection__review__reviewer", "created_by", "reviewer"
+        )
+
+        if has_exact_incident_role(request.user, ENGINEER):
+            incidents = incidents.filter(created_by=request.user)
+
+        serializer = IncidentSerializer(
+            incidents,
+            many=True,
+            context={"request": request},
+        )
+        return Response(serializer.data)
+
+    def post(self, request):
+        input_serializer = IncidentCreateSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+
+        inspection_id = input_serializer.validated_data["inspection_id"]
+
+        with transaction.atomic():
+            inspection = get_object_or_404(
+                Inspection.objects.select_for_update(),
+                pk=inspection_id,
+                submitted_by=request.user,
+            )
+
+            # Repeated requests return the original incident without overwriting it.
+            existing = Incident.objects.filter(inspection=inspection).first()
+            if existing:
+                return Response(
+                    IncidentSerializer(existing, context={"request": request}).data,
+                    status=status.HTTP_200_OK,
+                )
+
+            if inspection.status != Inspection.Status.COMPLETED:
+                return Response(
+                    {"detail": "Only completed inspections can create incidents."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Use the original classifier prediction, never the human review.
+            if inspection.predicted_class != Inspection.PredictedClass.DEFECTIVE:
+                return Response(
+                    {"detail": "Only inspections flagged as Defective by the classifier are eligible."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            content = generate_safe_incident_content(inspection)
+
+            incident = Incident.objects.create(
+                inspection=inspection,
+                product_id_snapshot=inspection.product.product_id,
+                product_name_snapshot=inspection.product.name,
+                original_prediction=inspection.predicted_class,
+                original_confidence=inspection.confidence,
+                original_defect_probability=inspection.defect_probability,
+                model_version_snapshot=inspection.model_version,
+                summary=content["summary"],
+                actions=content["actions"],
+                sources=content["sources"],
+                evidence_status=content["evidence_status"],
+                evidence_reason=content["evidence_reason"],
+                manual_review_required=(
+                    content["evidence_status"] != Incident.EvidenceStatus.SUFFICIENT
+                ),
+                created_by=request.user,
+            )
+
+        return Response(
+            IncidentSerializer(incident, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class IncidentDetailAPIView(generics.RetrieveAPIView):
+    serializer_class = IncidentSerializer
+    permission_classes = [CanViewIncidents]
+    lookup_field = "incident_id"
+
+    def get_queryset(self):
+        incidents = Incident.objects.select_related(
+            "inspection__submitted_by", "inspection__review__reviewer", "created_by", "reviewer"
+        )
+
+        if has_exact_incident_role(self.request.user, ENGINEER):
+            incidents = incidents.filter(created_by=self.request.user)
+
+        return incidents
+
+
+class IncidentDecisionAPIView(APIView):
+    """Only a Supervisor can submit an incident decision."""
+
+    permission_classes = [IsIncidentSupervisor]
+
+    def post(self, request, incident_id):
+        with transaction.atomic():
+            incident = get_object_or_404(
+                Incident.objects.select_for_update(),
+                incident_id=incident_id,
+            )
+
+            serializer = IncidentDecisionSerializer(
+                data=request.data,
+                context={"incident": incident},
+            )
+            serializer.is_valid(raise_exception=True)
+
+            incident.decision = serializer.validated_data["decision"]
+            incident.review_comment = serializer.validated_data["review_comment"]
+            incident.reviewer = request.user
+            incident.reviewed_at = timezone.now()
+
+            incident.save(update_fields=[
+                "decision",
+                "review_comment",
+                "reviewer",
+                "reviewed_at",
+                "updated_at",
+            ])
+
+        return Response(
+            IncidentSerializer(incident, context={"request": request}).data,
+            status=status.HTTP_200_OK,
+        )
+

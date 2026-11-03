@@ -16,4 +16,8 @@ urlpatterns = [
     path('inspections/<int:pk>/', views.InspectionDetailAPIView.as_view(), name='inspection-detail'),
     path('inspections/<int:pk>/review/', views.InspectionReviewAPIView.as_view(), name='inspection-review'),
     path('inspections/<int:pk>/image/', views.InspectionImageView.as_view(), name='inspection-image'),
+    path('incidents/', views.IncidentListCreateAPIView.as_view(), name='incident-list-create'),
+    path('incidents/<uuid:incident_id>/', views.IncidentDetailAPIView.as_view(), name='incident-detail'),
+    path('incidents/<uuid:incident_id>/decision/', views.IncidentDecisionAPIView.as_view(), name='incident-decision'),
 ]
+

@@ -157,5 +157,17 @@
   s.search.addEventListener('input', render);
   document.getElementById('sup-filters').addEventListener('submit', (e) => e.preventDefault());
 
+  /* Round 3: incidents */
+  const loadIncidents = window.Incidents.listScreen({
+    body: document.getElementById('incidents-body'),
+    count: document.getElementById('incidents-count'),
+    filter: document.getElementById('incidents-filter'),
+    refresh: document.getElementById('incidents-refresh'),
+    canDecide: true,
+    showEngineer: true,
+  });
+  document.getElementById('tab-incidents').addEventListener('shown.bs.tab', loadIncidents);
+  if (window.location.hash === '#incidents') loadIncidents();
+
   load();
 })();
