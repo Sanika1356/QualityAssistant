@@ -133,6 +133,8 @@
       const item = await api('/api/inspections/', { method: 'POST', body });
       sessionSet(LAST_SINGLE_KEY, String(item.id));
       showSingleResult(item, 'Model verdict');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      single.result.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
       historyStale = true;
     } catch (error) {
       showAlert(single.alert, error.message);

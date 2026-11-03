@@ -561,6 +561,37 @@ h1, h2, h3, .h1, .h2, .h3 {
   min-height: 0;
   padding: 0.75rem;
 }
+/* Single inspection: one centred column, upload card then result. */
+.single-column {
+  max-width: 760px;
+  margin-inline: auto;
+}
+.single-column .panel-head {
+  padding-block: 0.75rem;
+}
+.single-column .panel-body {
+  padding: 1rem 1.25rem;
+}
+.single-result {
+  margin-top: 1.25rem;
+  scroll-margin-top: 1rem;
+}
+/* In the narrower column, let the File fact (3rd) use the full row so names don't split. */
+.single-result .facts > div:nth-child(3) {
+  grid-column: 1 / -1;
+}
+.dropzone-compact {
+  min-height: 6.5rem;
+  padding: 1rem;
+  gap: 0.15rem;
+}
+.dropzone-compact .dropzone-icon {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+.dropzone-compact .preview-img {
+  max-height: 9rem;
+}
 .preview-img {
   display: block;
   width: 100%;

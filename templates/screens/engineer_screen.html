@@ -25,8 +25,7 @@
 <div class="tab-content">
   {# ---------------- Single inspection ---------------- #}
   <section class="tab-pane fade show active" id="single" role="tabpanel" aria-labelledby="tab-single" tabindex="0">
-    <div class="row g-4">
-      <div class="col-lg-4">
+    <div class="single-column">
         <form class="panel" id="single-form" novalidate>
           <div class="panel-head"><h2>Inspect one plate</h2></div>
           <div class="panel-body">
@@ -39,7 +38,7 @@
             </div>
             <div class="mb-3">
               <span class="form-label d-block" id="single-file-label">Plate image</span>
-              <label class="dropzone" id="single-drop" aria-describedby="single-file-help">
+              <label class="dropzone dropzone-compact" id="single-drop" aria-describedby="single-file-help">
                 <input type="file" id="single-file" name="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"
                        aria-labelledby="single-file-label">
                 <span data-drop-empty>
@@ -58,19 +57,11 @@
             <button class="btn btn-primary w-100" type="submit" id="single-submit" disabled>Inspect plate</button>
           </div>
         </form>
-      </div>
-      <div class="col-lg-8" aria-live="polite" id="single-result">
-        <div class="panel">
-          <div class="state">
-            <svg class="state-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
-                 stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 5h16v14H4z"/><path d="M4 16l5-5 4 4 3-3 4 4"/>
-            </svg>
-            <div class="state-title">No plate inspected yet</div>
-            <div class="small">Choose a product and an image, then select Inspect plate. The result appears here.</div>
+        <div class="single-result" aria-live="polite" id="single-result">
+          <div class="panel">
+            <p class="muted text-center small m-0 py-3 px-3">No result yet. Inspect a plate to see it here.</p>
           </div>
         </div>
-      </div>
     </div>
   </section>
 
