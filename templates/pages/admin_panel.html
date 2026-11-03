@@ -68,8 +68,13 @@
     </section>
   </div>
 </div>
+
+<div class="mt-4">
+  {% include "partials/metrics_panel.html" %}
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{% static 'js/admin_panel.js' %}"></script>
+<script src="{% static 'js/metrics.js' %}"></script>
 {% endblock %}

@@ -1,29 +1,171 @@
 {% load static %}
+{# Engineer screen. Layout follows Person 4's original single / batch / history screens. #}
 <div class="page-head">
   <div>
     <h1>Inspections</h1>
-    <p class="lead-text">Upload plate images and follow their results.</p>
+    <p class="lead-text">Inspect one plate now, send a batch to run in the background, or look back at your results.</p>
   </div>
 </div>
 
-{# ===== PLACEHOLDER: Person 4 replaces everything in this file with the Engineer screen. ===== #}
-<section class="handoff" aria-labelledby="engineer-handoff-title" data-placeholder="person-4-engineer">
-  <span class="handoff-tag">Placeholder · Person 4</span>
-  <h2 id="engineer-handoff-title" class="h5">Engineer screen goes here</h2>
-  <p class="mb-3">Person 4 builds the batch upload and history screen in this file:
-    <code>templates/screens/engineer_screen.html</code>, with its script in
-    <code>static/js/screens/engineer.js</code>.</p>
-  <p class="mb-2 fw-semibold">APIs for this screen</p>
-  <ul class="mb-3">
-    <li><code>POST /api/batches/</code>: <code>product</code> and 1 to 10 <code>files</code></li>
-    <li><code>GET /api/batches/&lt;id&gt;/</code>: poll until nothing is queued or processing</li>
-    <li><code>GET /api/inspections/</code>: history of your own inspections</li>
-    <li><code>image_url</code> on each item: use it as an <code>&lt;img src&gt;</code></li>
-  </ul>
-  <p class="mb-2 fw-semibold">Result styles</p>
-  <div class="d-flex flex-wrap gap-2">
-    <span class="result result-normal">Normal</span>
-    <span class="result result-defective">Defective</span>
-  </div>
-</section>
-{# ===== END PLACEHOLDER ===== #}
+<ul class="nav section-tabs" role="tablist" aria-label="Inspection tools" data-tabs>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link active" id="tab-single" data-bs-toggle="pill" href="#single" role="tab"
+       aria-controls="single" aria-selected="true">Single inspection</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="tab-batch" data-bs-toggle="pill" href="#batch" role="tab"
+       aria-controls="batch" aria-selected="false">Batch</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="tab-history" data-bs-toggle="pill" href="#history" role="tab"
+       aria-controls="history" aria-selected="false">My history</a>
+  </li>
+</ul>
+
+<div class="tab-content">
+  {# ---------------- Single inspection ---------------- #}
+  <section class="tab-pane fade show active" id="single" role="tabpanel" aria-labelledby="tab-single" tabindex="0">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <form class="panel" id="single-form" novalidate>
+          <div class="panel-head"><h2>Inspect one plate</h2></div>
+          <div class="panel-body">
+            <div id="single-alert" hidden></div>
+            <div class="mb-3">
+              <label class="form-label" for="single-product">Product</label>
+              <select class="form-select" id="single-product" name="product" required data-products>
+                <option value="">Loading products…</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <span class="form-label d-block" id="single-file-label">Plate image</span>
+              <label class="dropzone" id="single-drop" aria-describedby="single-file-help">
+                <input type="file" id="single-file" name="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                       aria-labelledby="single-file-label">
+                <span data-drop-empty>
+                  <svg class="dropzone-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+                       stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/>
+                  </svg>
+                  <span class="dropzone-title d-block">Drop an image here</span>
+                  <span class="d-block small">or <u>choose a file</u></span>
+                </span>
+                <img class="preview-img" id="single-preview" alt="" hidden>
+              </label>
+              <div id="single-file-help" class="form-text">JPEG or PNG, up to 5 MiB, each side 64 to 4096 pixels.
+                <span id="single-file-name" class="fw-semibold"></span></div>
+            </div>
+            <button class="btn btn-primary w-100" type="submit" id="single-submit" disabled>Inspect plate</button>
+          </div>
+        </form>
+      </div>
+      <div class="col-lg-8" aria-live="polite" id="single-result">
+        <div class="panel">
+          <div class="state">
+            <svg class="state-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+                 stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 5h16v14H4z"/><path d="M4 16l5-5 4 4 3-3 4 4"/>
+            </svg>
+            <div class="state-title">No plate inspected yet</div>
+            <div class="small">Choose a product and an image, then select Inspect plate. The result appears here.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# ---------------- Batch ---------------- #}
+  <section class="tab-pane fade" id="batch" role="tabpanel" aria-labelledby="tab-batch" tabindex="0">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <form class="panel" id="batch-form" novalidate>
+          <div class="panel-head">
+            <h2>New batch</h2>
+            <span class="count-badge" id="batch-count" aria-live="polite">0 of 10 files</span>
+          </div>
+          <div class="panel-body">
+            <div id="batch-alert" hidden></div>
+            <div class="mb-3">
+              <label class="form-label" for="batch-product">Product</label>
+              <select class="form-select" id="batch-product" name="product" required data-products>
+                <option value="">Loading products…</option>
+              </select>
+            </div>
+            <span class="form-label d-block" id="batch-file-label">Plate images</span>
+            <label class="dropzone mb-2" id="batch-drop" aria-describedby="batch-file-help">
+              <input type="file" id="batch-files" multiple accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                     aria-labelledby="batch-file-label">
+              <svg class="dropzone-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+                   stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/>
+              </svg>
+              <span class="dropzone-title">Drop up to 10 images</span>
+              <span class="small">or <u>choose files</u></span>
+            </label>
+            <div id="batch-file-help" class="form-text mb-3">Each file is checked on the server. Files that fail are
+              listed with the reason and never reach the model.</div>
+            <ul class="file-list mb-3" id="batch-file-list" aria-label="Selected files"></ul>
+            <button class="btn btn-primary w-100" type="submit" id="batch-submit" disabled>Start batch</button>
+          </div>
+        </form>
+      </div>
+      <div class="col-lg-8">
+        <section class="panel" aria-labelledby="batch-results-title">
+          <div class="panel-head">
+            <h2 id="batch-results-title">Batch progress</h2>
+            <span class="muted small" id="batch-meta"></span>
+          </div>
+          <div id="batch-progress" class="panel-body border-bottom" hidden aria-live="polite"></div>
+          <div id="batch-results">
+            <div class="state">
+              <svg class="state-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+                   stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 13l2-8h12l2 8"/><path d="M4 13v6h16v-6"/><path d="M4 13h5l1 2h4l1-2h5"/>
+              </svg>
+              <div class="state-title">No batch running</div>
+              <div class="small">Add 1 to 10 images and start a batch. Each file's status updates here as it is processed.</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  {# ---------------- History ---------------- #}
+  <section class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="tab-history" tabindex="0">
+    <section class="panel" aria-labelledby="history-title">
+      <div class="panel-head">
+        <h2 id="history-title">My history</h2>
+        <span class="muted small" id="history-count" aria-live="polite"></span>
+      </div>
+      <form class="toolbar" id="history-filters" role="search" aria-label="Filter my history">
+        <div class="field">
+          <label class="form-label" for="history-prediction">Result</label>
+          <select class="form-select" id="history-prediction" name="prediction">
+            <option value="">All results</option>
+            <option value="Normal">Normal</option>
+            <option value="Defective">Defective</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="form-label" for="history-review">Review</label>
+          <select class="form-select" id="history-review" name="review_status">
+            <option value="">Any review state</option>
+            <option value="pending">Awaiting review</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="corrected">Corrected</option>
+          </select>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-primary" id="history-refresh">Refresh</button>
+        </div>
+      </form>
+      <div id="history-body"></div>
+    </section>
+  </section>
+</div>
+
+{% include "partials/inspection_dialog.html" %}
+
+{# defer: runs after the page and Bootstrap (loaded at the end of base.html) are ready. #}
+<script defer src="{% static 'js/screens/engineer.js' %}"></script>

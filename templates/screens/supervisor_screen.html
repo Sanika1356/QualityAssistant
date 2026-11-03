@@ -1,29 +1,69 @@
 {% load static %}
+{# Supervisor screen. Layout follows Person 4's original review history and metrics screens. #}
 <div class="page-head">
   <div>
     <h1>Review</h1>
-    <p class="lead-text">Check model results and confirm or correct them.</p>
+    <p class="lead-text">Check every engineer's results, confirm or correct them, and see how the model was evaluated.</p>
   </div>
 </div>
 
-{# ===== PLACEHOLDER: Person 4 replaces everything in this file with the Supervisor screen. ===== #}
-<section class="handoff" aria-labelledby="supervisor-handoff-title" data-placeholder="person-4-supervisor">
-  <span class="handoff-tag">Placeholder · Person 4</span>
-  <h2 id="supervisor-handoff-title" class="h5">Supervisor screen goes here</h2>
-  <p class="mb-3">Person 4 builds the review queue and history screen in this file:
-    <code>templates/screens/supervisor_screen.html</code>, with its script in
-    <code>static/js/screens/supervisor.js</code>.</p>
-  <p class="mb-2 fw-semibold">APIs for this screen</p>
-  <ul class="mb-3">
-    <li><code>GET /api/inspections/?review_status=pending</code>: items waiting for review</li>
-    <li><code>GET /api/inspections/?prediction=Defective</code>: filter by model result</li>
-    <li><code>POST /api/inspections/&lt;id&gt;/review/</code>: <code>reviewed_class</code> and <code>comment</code></li>
-    <li><code>image_url</code> on each item: use it as an <code>&lt;img src&gt;</code></li>
-  </ul>
-  <p class="mb-2 fw-semibold">Result styles</p>
-  <div class="d-flex flex-wrap gap-2">
-    <span class="result result-normal">Normal</span>
-    <span class="result result-defective">Defective</span>
-  </div>
-</section>
-{# ===== END PLACEHOLDER ===== #}
+<ul class="nav section-tabs" role="tablist" aria-label="Supervisor tools" data-tabs>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link active" id="tab-review" data-bs-toggle="pill" href="#review" role="tab"
+       aria-controls="review" aria-selected="true">History &amp; review</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="tab-metrics" data-bs-toggle="pill" href="#metrics" role="tab"
+       aria-controls="metrics" aria-selected="false">Model metrics</a>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <section class="tab-pane fade show active" id="review" role="tabpanel" aria-labelledby="tab-review" tabindex="0">
+    <section class="panel" aria-labelledby="sup-history-title">
+      <div class="panel-head">
+        <h2 id="sup-history-title">All inspections</h2>
+        <span class="muted small" id="sup-count" aria-live="polite"></span>
+      </div>
+      <form class="toolbar" id="sup-filters" role="search" aria-label="Filter inspections">
+        <div class="field">
+          <label class="form-label" for="sup-prediction">Result</label>
+          <select class="form-select" id="sup-prediction">
+            <option value="">All results</option>
+            <option value="Normal">Normal</option>
+            <option value="Defective">Defective</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="form-label" for="sup-review">Review</label>
+          <select class="form-select" id="sup-review">
+            <option value="">Any review state</option>
+            <option value="pending">Awaiting review</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="corrected">Corrected</option>
+          </select>
+        </div>
+        <div class="field field-wide">
+          <label class="form-label" for="sup-search">Search this list</label>
+          <input class="form-control" type="search" id="sup-search" placeholder="File name or engineer"
+                 autocomplete="off">
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-primary" id="sup-refresh">Refresh</button>
+        </div>
+      </form>
+      <div class="summary-strip" id="sup-summary" hidden></div>
+      <div id="sup-body"></div>
+    </section>
+  </section>
+
+  <section class="tab-pane fade" id="metrics" role="tabpanel" aria-labelledby="tab-metrics" tabindex="0">
+    {% include "partials/metrics_panel.html" %}
+  </section>
+</div>
+
+{% include "partials/inspection_dialog.html" %}
+
+{# defer: runs after the page and Bootstrap (loaded at the end of base.html) are ready. #}
+<script defer src="{% static 'js/metrics.js' %}"></script>
+<script defer src="{% static 'js/screens/supervisor.js' %}"></script>

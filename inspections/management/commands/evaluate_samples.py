@@ -1,8 +1,10 @@
 import csv
+import json
 from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 
 from inspections.model.inference import MODEL_VERSION, predict
 from inspections.validators import validate_image
@@ -108,6 +110,35 @@ class Command(BaseCommand):
             )
 
         report = '\n'.join(lines) + '\n'
-        Path(options['output']).write_text(report, encoding='utf-8')
+        output = Path(options['output'])
+        output.write_text(report, encoding='utf-8')
+
+        # Same numbers, machine-readable, for GET /api/metrics/ and the metrics panel.
+        json_path = output.with_suffix('.json')
+        json_path.write_text(json.dumps({
+            'generated_at': timezone.now().isoformat(),
+            'command': 'python manage.py evaluate_samples',
+            'model_version': MODEL_VERSION,
+            'decision_threshold': 0.5,
+            'images_found': len(images),
+            'sample_count': scored,
+            'classes': list(CLASSES),
+            'confusion_matrix': {
+                'rows': 'actual',
+                'columns': 'predicted',
+                'order': list(CLASSES),
+                'values': [[tn, fp], [fn, tp]],
+            },
+            'tp': tp, 'fn': fn, 'fp': fp, 'tn': tn,
+            'defect_recall': tp / (tp + fn) if tp + fn else None,
+            'accuracy': (tp + tn) / scored if scored else None,
+            'failures': [{'image': key, 'reason': why} for key, why in failures],
+            'misclassified': [{'image': k, 'actual': a, 'predicted': p} for k, a, p in mistakes],
+            'limitation': (
+                f'These are {scored} synthetic images with fixed framing. A perfect score here '
+                'cannot establish how the model will perform on real factory images.'
+            ),
+        }, indent=2) + '\n', encoding='utf-8')
+
         self.stdout.write(report)
-        self.stdout.write(f"Saved to {options['output']}")
+        self.stdout.write(f'Saved to {output} and {json_path}')

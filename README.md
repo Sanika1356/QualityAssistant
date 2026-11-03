@@ -59,6 +59,7 @@ corrects the result.
 | GET | /api/inspections/<id>/image/ | View the saved image, with access checks |
 | POST | /api/batches/ | Submit 1 to 10 images for background inspection |
 | GET | /api/batches/<id>/ | Follow each batch item's status |
+| GET | /api/metrics/ | Saved result of `python manage.py evaluate_samples` (any role) |
 
 ## Single-Image Inspection
 
