@@ -1335,3 +1335,9 @@ h1, h2, h3, .h1, .h2, .h3 {
 @media (min-width: 992px) {
   .inspection-details .details-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* The longer site name must wrap on phones instead of widening the page. */
+@media (max-width: 575.98px) {
+  .app-header .navbar-brand { white-space: normal; min-width: 0; max-width: calc(100% - 4.75rem); margin-right: 0; font-size: 1rem; line-height: 1.2; }
+  .app-header .brand-sub { font-size: 0.68rem; }
+}

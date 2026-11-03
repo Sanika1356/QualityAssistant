@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Visual Inspection{% endblock %} · Visual Inspection</title>
+  <title>{% block title %}Quality Incident and Action Assistant{% endblock %} · Quality Incident and Action Assistant</title>
   <link rel="stylesheet" href="{% static 'vendor/bootstrap-5.3.3/css/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {# No favicon file: an empty icon stops the browser requesting /favicon.ico (a 404). #}
+  <link rel="icon" href="data:,">
   {# Loaded in <head> so api() is ready for any page or screen script. #}
   <script src="{% static 'js/api.js' %}"></script>
   <script src="{% static 'js/ui.js' %}"></script>
@@ -20,7 +22,7 @@
       <div class="container-lg">
         <a class="navbar-brand" href="{% url 'home' %}">
           {% include "partials/brand_mark.html" %}
-          <span>Visual Inspection<span class="brand-sub">Metal plate quality check</span></span>
+          <span>Quality Incident and Action Assistant<span class="brand-sub">Metal plate inspections and quality incidents</span></span>
         </a>
         {% if current_role %}
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav"
