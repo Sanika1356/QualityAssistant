@@ -35,16 +35,31 @@ logger = logging.getLogger(__name__)
 MAX_BATCH_FILES = 10
 
 
+QUEUE_UNAVAILABLE = 'Could not queue this image for processing (task queue unavailable).'
+
+
 def queue_inspection(inspection_id):
+    """Queue one item. Returns False (and marks the item failed) if the task queue is unavailable."""
     try:
         process_inspection.delay(inspection_id)
+        return True
     except Exception:
         # Broker down: say so on the item instead of leaving it queued forever.
         logger.exception('Could not queue inspection %s', inspection_id)
         Inspection.objects.filter(pk=inspection_id, status=Inspection.Status.QUEUED).update(
-            status=Inspection.Status.FAILED,
-            failure_reason='Could not queue this image for processing (task queue unavailable).',
+            status=Inspection.Status.FAILED, failure_reason=QUEUE_UNAVAILABLE,
         )
+        return False
+
+
+def queue_batch(inspection_ids):
+    # After the first failure the queue is down: fail the rest at once instead of waiting on each.
+    for index, inspection_id in enumerate(inspection_ids):
+        if not queue_inspection(inspection_id):
+            Inspection.objects.filter(
+                pk__in=inspection_ids[index + 1:], status=Inspection.Status.QUEUED
+            ).update(status=Inspection.Status.FAILED, failure_reason=QUEUE_UNAVAILABLE)
+            return
 
 
 def batch_queryset():
@@ -80,6 +95,7 @@ class BatchCreateView(APIView):
 
         with transaction.atomic():
             batch = Batch.objects.create(product=product, submitted_by=request.user)
+            to_queue = []
             for upload in files:
                 reason = validate_image(upload)
                 item = Inspection(
@@ -96,7 +112,8 @@ class BatchCreateView(APIView):
                     item.image.save(upload.name, upload, save=False)
                 item.save()
                 if not reason:
-                    transaction.on_commit(lambda pk=item.pk: queue_inspection(pk))
+                    to_queue.append(item.pk)
+            transaction.on_commit(lambda ids=tuple(to_queue): queue_batch(ids))
 
         batch = batch_queryset().get(pk=batch.pk)
         data = BatchSerializer(batch, context={'request': request}).data

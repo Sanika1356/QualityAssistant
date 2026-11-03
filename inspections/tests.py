@@ -229,6 +229,29 @@ class MixedBatchTests(BatchTestBase):
         self.assertEqual(item.status, 'failed')
         self.assertIn('queue', item.failure_reason)
 
+    def test_broker_down_fails_rest_of_batch_without_retrying(self):
+        celery_app.conf.task_always_eager = False
+        try:
+            with mock.patch(
+                'inspections.views.process_inspection.delay', side_effect=ConnectionError('down')
+            ) as delay, self.assertLogs('inspections.views', level='ERROR'):
+                response = self.post_batch([upload(SAMPLE_A), upload(SAMPLE_B), upload(VALIDATION_FILES[0])])
+        finally:
+            celery_app.conf.task_always_eager = True
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(delay.call_count, 1)  # gave up after the first failure
+        reasons = dict(Inspection.objects.values_list('original_filename', 'failure_reason'))
+        unavailable = 'Could not queue this image for processing (task queue unavailable).'
+        self.assertEqual(reasons[SAMPLE_A.name], unavailable)
+        self.assertEqual(reasons[SAMPLE_B.name], unavailable)
+        self.assertNotEqual(reasons[VALIDATION_FILES[0].name], unavailable)  # keeps its own reason
+        self.assertFalse(Inspection.objects.filter(status='queued').exists())
+
+    def test_celery_fails_fast_settings(self):
+        self.assertTrue(celery_app.conf.task_ignore_result)
+        self.assertFalse(celery_app.conf.task_publish_retry)
+        self.assertLessEqual(celery_app.conf.broker_transport_options['socket_connect_timeout'], 2)
+
 
 class RenameTests(BatchTestBase):
     def test_filename_does_not_affect_prediction(self):

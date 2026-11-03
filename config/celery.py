@@ -17,4 +17,16 @@ if REDIS_PROTOCOL != 3:
 
 app = Celery('config')
 app.config_from_object('django.conf:settings', namespace='CELERY')
+
+# Fail fast when Redis is down, so an upload request never hangs.
+app.conf.update(
+    # Results live in the database; Celery's own result store is never read. Without this,
+    # every .delay() spent ~100s retrying the result store when Redis was unavailable.
+    task_ignore_result=True,
+    task_publish_retry=False,
+    broker_connection_timeout=2,
+    broker_transport_options={'socket_connect_timeout': 1, 'socket_timeout': 5},
+    redis_socket_connect_timeout=1,
+    redis_socket_timeout=5,
+)
 app.autodiscover_tasks()
