@@ -1215,3 +1215,53 @@ h1, h2, h3, .h1, .h2, .h3 {
 .incident-source + .incident-source { margin-top: 0.75rem; }
 .incident-source-head { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; justify-content: space-between; }
 .incident-passage { margin: 0.25rem 0 0; color: var(--vi-ink-muted); white-space: pre-line; overflow-wrap: anywhere; }
+
+/* Incident dialog: one clear column of blocks, status colour first. */
+.incident-view { max-width: 60rem; margin: 0 auto; }
+.incident-view > * + * { margin-top: 1rem; }
+.incident-view .detail-block + .detail-block { margin-top: 1rem; }
+.incident-facts { border-top: 0; padding-top: 0; }
+.incident-summary { margin: 1rem 0 0; padding-top: 1rem; border-top: 1px solid var(--vi-line); line-height: 1.55; }
+
+.incident-evidence {
+  border: 1px solid var(--vi-line);
+  border-left-width: 6px;
+  border-radius: var(--vi-radius);
+  padding: 1rem 1.25rem;
+}
+.incident-evidence.is-sufficient { background: var(--vi-normal-bg); border-color: var(--vi-normal-line); border-left-color: var(--vi-normal-fg); }
+.incident-evidence.is-insufficient { background: var(--vi-failed-bg); border-color: var(--vi-failed-line); border-left-color: var(--vi-failed-fg); }
+.incident-evidence-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-bottom: 0.5rem; }
+.incident-manual { color: var(--vi-failed-fg); }
+
+.incident-inspection-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: start; }
+@media (min-width: 576px) {
+  .incident-inspection-grid { grid-template-columns: 9rem minmax(0, 1fr); }
+}
+.incident-image-link { display: block; justify-self: start; }
+.incident-image {
+  display: block;
+  width: 9rem;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  background: var(--vi-plate-bg);
+}
+.incident-image.thumb-empty { display: grid; place-items: center; }
+
+.incident-documents { list-style: none; padding: 0; margin: 0; }
+.incident-documents li {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.25rem 1rem;
+  padding: 0.6rem 0;
+}
+.incident-documents li + li { border-top: 1px solid var(--vi-line); }
+
+.incident-source-head a, .incident-documents a { font-weight: 600; white-space: nowrap; }
+.incident-attempt { margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--vi-line); }
+
+@media (max-width: 575.98px) {
+  .incident-view .detail-block { padding: 1rem; }
+  .incident-view .incident-facts { grid-template-columns: minmax(0, 1fr); }
+  .incident-actions { padding-left: 1.1rem; }
+}

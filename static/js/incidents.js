@@ -8,6 +8,8 @@
   const { el } = UI;
   const URL = '/api/incidents/';
 
+  const ENGINEER_DENIAL_COMMENT = 'Engineer review attempt: the server must refuse this.';
+
   function decisionChip(decision) {
     const kind = decision === 'Pending' ? 'pending'
       : decision === 'Approved for follow-up' ? 'confirmed' : 'corrected';
@@ -22,8 +24,63 @@
   }
 
   function facts(rows) {
-    return el('dl', { class: 'facts', style: 'border-top:0;padding-top:0' },
+    return el('dl', { class: 'facts incident-facts' },
       rows.map(([label, value]) => el('div', {}, el('dt', { text: label }), el('dd', {}, value))));
+  }
+
+  function block(title, extraClass, ...children) {
+    return el('section', { class: `detail-block ${extraClass || ''}`.trim() },
+      el('h3', {}, ...(Array.isArray(title) ? title : [el('span', { text: title })])),
+      ...children);
+  }
+
+  /* Evidence status and its reason are always shown, whatever the status. */
+  function evidenceBanner(incident) {
+    const sufficient = incident.evidence_status === 'Sufficient';
+    return el('div', {
+      class: `incident-evidence ${sufficient ? 'is-sufficient' : 'is-insufficient'}`, role: 'status',
+    },
+    el('div', { class: 'incident-evidence-head' },
+      evidenceChip(incident.evidence_status),
+      incident.manual_review_required
+        ? el('strong', { class: 'incident-manual', text: 'Manual review required' }) : null),
+    el('p', { class: 'mb-0', text: incident.evidence_reason || 'No reason was recorded.' }));
+  }
+
+  /* The saved Round 2 inspection this incident was created from. */
+  function inspectionBlock(incident) {
+    const image = incident.inspection_image_url
+      ? el('a', {
+        href: incident.inspection_image_url, target: '_blank', rel: 'noopener', class: 'incident-image-link',
+        'aria-label': 'Open the inspection image in a new tab',
+      }, el('img', {
+        class: 'incident-image', src: incident.inspection_image_url,
+        alt: `Inspected plate: ${incident.inspection_original_filename}`,
+      }))
+      : el('span', { class: 'thumb thumb-empty incident-image', text: 'No image' });
+    return block(
+      [el('span', { text: 'Saved inspection' }), el('span', { class: 'chip chip-muted', text: `#${incident.inspection_id}` })],
+      'incident-inspection',
+      el('div', { class: 'incident-inspection-grid' },
+        image,
+        facts([
+          ['File name', incident.inspection_original_filename || '—'],
+          ['Inspected', UI.when(incident.inspection_inspected_at)],
+          ['Submitted by', incident.inspection_submitted_by || '—'],
+          ['Product', `${incident.product_id_snapshot} (${incident.product_name_snapshot})`],
+        ])));
+  }
+
+  function originalResult(incident) {
+    return block(
+      [el('span', { text: 'Original classifier result' }), el('span', { class: 'chip chip-muted', text: 'Never edited' })],
+      'is-original',
+      facts([
+        ['Result', UI.resultBadge(incident.original_prediction)],
+        ['Confidence', UI.percent(incident.original_confidence)],
+        ['Defect probability', UI.probability(incident.original_defect_probability)],
+        ['Model version', incident.model_version_snapshot || '—'],
+      ]));
   }
 
   function sourceCard(source) {
@@ -38,61 +95,104 @@
       el('blockquote', { class: 'incident-passage', text: source.passage }));
   }
 
-  function originalResult(incident) {
-    return el('section', { class: 'detail-block is-original' },
-      el('h3', {}, el('span', { text: 'Original classifier result' }),
-        el('span', { class: 'chip chip-muted', text: 'Never edited' })),
-      facts([
-        ['Result', UI.resultBadge(incident.original_prediction)],
-        ['Confidence', UI.percent(incident.original_confidence)],
-        ['Defect probability', UI.probability(incident.original_defect_probability)],
-        ['Model version', incident.model_version_snapshot || '—'],
-      ]));
+  /* Each cited document once, with its revision and a link to the whole PDF. */
+  function documentsUsed(incident) {
+    const seen = new Map();
+    for (const source of incident.sources || []) {
+      const key = `${source.document_id}|${source.revision}`;
+      if (!seen.has(key)) seen.set(key, source);
+    }
+    const documents = [...seen.values()];
+    return block('Documents used', '',
+      documents.length
+        ? el('ul', { class: 'incident-documents' }, documents.map((source) =>
+          el('li', {},
+            el('span', {}, el('strong', { text: source.document_id }), ` Revision ${source.revision}`),
+            el('a', {
+              href: source.source_url.split('#')[0], target: '_blank', rel: 'noopener', text: 'Open PDF',
+              'aria-label': `Open ${source.document_id} revision ${source.revision} in a new tab`,
+            }))))
+        : el('p', { class: 'muted mb-0', text: 'No SOP document supports a suggested action for this incident.' }));
   }
 
   function contentBlocks(incident) {
-    const blocks = [];
-    if (incident.manual_review_required) {
-      blocks.push(el('div', { class: 'alert alert-warning', role: 'status' },
-        el('strong', { text: 'Manual review required. ' }), incident.evidence_reason));
+    const blocks = [evidenceBanner(incident), inspectionBlock(incident), originalResult(incident)];
+    if (incident.human_correction) {
+      blocks.push(block('Human correction (recorded separately)', 'is-review',
+        el('p', { class: 'mb-0', text: incident.human_correction })));
     }
-    blocks.push(el('section', { class: 'detail-block' },
-      el('h3', {}, el('span', { text: 'Incident' }), evidenceChip(incident.evidence_status)),
+    blocks.push(block([el('span', { text: 'Incident' }), evidenceChip(incident.evidence_status)], '',
       facts([
         ['Incident ID', incident.incident_id],
-        ['Inspection', `#${incident.inspection_id}`],
-        ['Product', `${incident.product_id_snapshot} (${incident.product_name_snapshot})`],
         ['Created by', incident.created_by],
         ['Created', UI.when(incident.created_at)],
       ]),
-      el('p', { class: 'mt-3 mb-0', text: incident.summary })));
-    blocks.push(originalResult(incident));
-    if (incident.human_correction) {
-      blocks.push(el('section', { class: 'detail-block is-review' },
-        el('h3', {}, el('span', { text: 'Human correction (recorded separately)' })),
-        el('p', { class: 'mb-0', text: incident.human_correction })));
-    }
-    if (incident.actions.length) {
-      blocks.push(el('section', { class: 'detail-block' },
-        el('h3', {}, el('span', { text: 'Suggested next actions' })),
-        el('ol', { class: 'incident-actions' }, incident.actions.map((action) =>
+      el('p', { class: 'incident-summary', text: incident.summary })));
+    blocks.push(block('Suggested next actions', '',
+      incident.actions.length
+        ? el('ol', { class: 'incident-actions' }, incident.actions.map((action) =>
           el('li', {},
             el('p', { class: 'incident-action-text', text: action.text }),
-            el('ul', { class: 'incident-sources' }, action.sources.map(sourceCard)))))));
-    }
+            el('ul', { class: 'incident-sources' }, action.sources.map(sourceCard)))))
+        : el('p', { class: 'muted mb-0', text: 'No suggested actions. A person must review this incident manually.' })));
+    blocks.push(documentsUsed(incident));
     return blocks;
   }
 
-  function decisionBlock(incident) {
-    return el('section', { class: 'detail-block is-review' },
-      el('h3', {}, el('span', { text: 'Supervisor decision' }), decisionChip(incident.decision)),
-      incident.decision === 'Pending'
+  /* Lets an Engineer show that the server refuses their review. It really sends the request. */
+  function engineerAttempt(incident) {
+    const result = el('div', { hidden: true });
+    const button = el('button', {
+      type: 'button', class: 'btn btn-outline-secondary btn-sm', text: 'Attempt review as Engineer',
+    });
+    button.addEventListener('click', async () => {
+      setBusy(button, true, 'Sending…');
+      let message = '';
+      let saved = false;
+      try {
+        await api(`${URL}${incident.incident_id}/decision/`, {
+          method: 'POST',
+          body: { decision: 'Needs more information', review_comment: ENGINEER_DENIAL_COMMENT },
+        });
+        saved = true;
+      } catch (error) {
+        message = error.message;
+      }
+      // Ask the server again, so the screen shows nothing was saved.
+      let after = '';
+      try {
+        const fresh = await api(`${URL}${incident.incident_id}/`);
+        after = ` Checked again: the decision is still ${fresh.decision}.`;
+      } catch (error) {
+        // The denial message is the important part; skip the re-check.
+      }
+      setBusy(button, false);
+      result.hidden = false;
+      result.className = `alert ${saved ? 'alert-warning' : 'alert-danger'} mt-3 mb-0`;
+      result.setAttribute('role', 'alert');
+      result.replaceChildren(
+        el('strong', { text: saved ? 'Unexpected: the server accepted the review.' : 'Denied by the server: ' }),
+        message, after);
+    });
+    return el('div', { class: 'incident-attempt' },
+      el('p', {
+        class: 'note mb-2',
+        text: 'Engineers cannot review incidents. This button sends a real review request so you can see the server refuse it.',
+      }),
+      button, result);
+  }
+
+  function decisionBlock(incident, options) {
+    const pending = incident.decision === 'Pending';
+    return block([el('span', { text: 'Supervisor decision' }), decisionChip(incident.decision)], 'is-review',
+      pending
         ? el('p', { class: 'muted mb-0', text: 'Waiting for a Supervisor. Only a Supervisor can record a decision.' })
         : facts([
           ['Reviewer', incident.reviewer || '—'],
           ['Decided', UI.when(incident.reviewed_at)],
           ['Comment', incident.review_comment || '—'],
         ]),
+      pending && options.engineerView ? engineerAttempt(incident) : null,
       el('p', { class: 'note mt-3 mb-0', text: 'Approval is for follow-up only. It does not release or scrap the item.' }));
   }
 
@@ -134,6 +234,7 @@
     return form;
   }
 
+  /* canDecide marks the Supervisor screen. Only Engineers otherwise can open incidents. */
   async function open(id, options = {}) {
     let incident;
     try {
@@ -146,8 +247,9 @@
     if (options.message) blocks.push(el('div', { class: 'alert alert-success', role: 'status', text: options.message }));
     blocks.push(...contentBlocks(incident));
     blocks.push(options.canDecide && incident.decision === 'Pending'
-      ? decisionForm(incident, options.onSaved) : decisionBlock(incident));
-    UI.showDialog(`Incident for inspection #${incident.inspection_id}`, el('div', { class: 'reveal' }, blocks));
+      ? decisionForm(incident, options.onSaved)
+      : decisionBlock(incident, { engineerView: !options.canDecide }));
+    UI.showDialog(`Incident for inspection #${incident.inspection_id}`, el('div', { class: 'incident-view reveal' }, blocks));
   }
 
   /* The Incidents tab. */

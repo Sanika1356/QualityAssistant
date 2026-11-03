@@ -208,3 +208,75 @@ class PermissionTests(IncidentTestBase):
     def test_pending_cannot_be_chosen_as_a_decision(self):
         incident_id = self.create().data['incident_id']
         self.assertEqual(self.decide(incident_id, decision='Pending').status_code, 400)
+
+
+class BriefGapTests(IncidentTestBase):
+    """Engineer denial, saved inspection fields, both SOPs cited, no 100% confidence."""
+
+    def test_engineer_review_attempt_is_denied_and_not_saved(self):
+        incident_id = self.create().data['incident_id']
+        # Exactly what the "Attempt review as Engineer" button sends.
+        response = self.as_user(self.engineer).post(
+            f'{URL}{incident_id}/decision/',
+            {'decision': 'Needs more information',
+             'review_comment': 'Engineer review attempt: the server must refuse this.'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data['detail'], 'Only Supervisors can review incidents.')
+        incident = Incident.objects.get()
+        self.assertEqual(incident.decision, 'Pending')
+        self.assertIsNone(incident.reviewer)
+        self.assertEqual(incident.review_comment, '')
+        self.assertIsNone(incident.reviewed_at)
+
+    def test_engineer_attempt_button_posts_to_decision_endpoint(self):
+        from django.conf import settings
+        script = (settings.BASE_DIR / 'static' / 'js' / 'incidents.js').read_text(encoding='utf-8')
+        self.assertIn('Attempt review as Engineer', script)
+        self.assertIn('/decision/`', script)
+        self.assertIn("method: 'POST'", script)
+
+    def test_incident_shows_saved_inspection(self):
+        self.inspection.image = 'inspections/sample.png'
+        self.inspection.original_filename = 'plate_042.png'
+        self.inspection.save()
+        data = self.create().data
+        self.assertEqual(data['inspection_original_filename'], 'plate_042.png')
+        self.assertEqual(data['inspection_submitted_by'], 'eng')
+        self.assertTrue(data['inspection_inspected_at'])
+        self.assertTrue(data['inspection_image_url'].endswith(f'/api/inspections/{self.inspection.pk}/image/'))
+
+        reloaded = self.as_user(self.supervisor).get(f"{URL}{data['incident_id']}/").data
+        self.assertEqual(reloaded['inspection_original_filename'], 'plate_042.png')
+        self.assertEqual(reloaded['inspection_image_url'], data['inspection_image_url'])
+
+    def test_incident_without_saved_image_has_no_image_url(self):
+        self.assertIsNone(self.create().data['inspection_image_url'])
+
+    def test_sufficient_incident_cites_both_plate_sops(self):
+        data = self.create().data
+        self.assertEqual(data['evidence_status'], 'Sufficient')
+        self.assertEqual({s['document_id'] for s in data['sources']}, {'Q-PLATE-01', 'Q-PLATE-02'})
+        self.assertTrue(data['evidence_reason'])
+
+    def test_uncited_required_sop_saves_insufficient(self):
+        from .test_sop_assistant import ONLY_PLATE_01_REPLY
+        self.ask_llm.return_value = ONLY_PLATE_01_REPLY
+        response = self.create()
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(response.data['evidence_status'], 'Insufficient')
+        self.assertTrue(response.data['manual_review_required'])
+        self.assertEqual(response.data['actions'], [])
+        self.assertEqual(response.data['sources'], [])
+        self.assertEqual(Incident.objects.count(), 1)
+        self.assertEqual(self.ask_llm.call_count, 2)
+        self.assertIn('Q-PLATE-02', response.data['evidence_reason'])
+
+    def test_summary_never_says_100_percent(self):
+        self.inspection.confidence = 0.9999999999999996
+        self.inspection.save()
+        summary = self.create().data['summary']
+        self.assertIn('confidence > 99.9%', summary)
+        self.assertNotIn('100.0%', summary)
+        self.assertNotIn('100%', summary)

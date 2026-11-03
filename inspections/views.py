@@ -397,7 +397,7 @@ class IncidentListCreateAPIView(APIView):
 
     def get(self, request):
         incidents = Incident.objects.select_related(
-            "inspection", "created_by", "reviewer"
+            "inspection__submitted_by", "inspection__review__reviewer", "created_by", "reviewer"
         )
 
         if has_exact_incident_role(request.user, ENGINEER):
@@ -478,7 +478,7 @@ class IncidentDetailAPIView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         incidents = Incident.objects.select_related(
-            "inspection", "created_by", "reviewer"
+            "inspection__submitted_by", "inspection__review__reviewer", "created_by", "reviewer"
         )
 
         if has_exact_incident_role(self.request.user, ENGINEER):

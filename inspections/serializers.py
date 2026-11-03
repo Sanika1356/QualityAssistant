@@ -112,6 +112,20 @@ class IncidentSerializer(serializers.ModelSerializer):
 
     human_correction = serializers.SerializerMethodField()
 
+    # The saved Round 2 inspection the incident came from.
+    inspection_image_url = serializers.SerializerMethodField()
+    inspection_original_filename = serializers.CharField(
+        source='inspection.original_filename', read_only=True
+    )
+    inspection_inspected_at = serializers.DateTimeField(source='inspection.created_at', read_only=True)
+    inspection_submitted_by = serializers.CharField(
+        source='inspection.submitted_by.username', read_only=True
+    )
+
+    def get_inspection_image_url(self, incident):
+        # Same access-checked endpoint as Round 2, never the raw media file.
+        return BatchItemSerializer(context=self.context).get_image_url(incident.inspection)
+
     def get_human_correction(self, incident):
         # Shown apart from the classifier's original result; it never changes it.
         from .sop_assistant import build_human_correction
@@ -123,6 +137,10 @@ class IncidentSerializer(serializers.ModelSerializer):
         fields = [
             'incident_id',
             'inspection_id',
+            'inspection_image_url',
+            'inspection_original_filename',
+            'inspection_inspected_at',
+            'inspection_submitted_by',
             'product_id_snapshot',
             'product_name_snapshot',
             'original_prediction',
