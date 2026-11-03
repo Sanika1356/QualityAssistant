@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import pages
+from . import pages, sop_views
 
 # Browser pages. /admin/ stays Django's own admin site.
 urlpatterns = [
@@ -10,4 +10,5 @@ urlpatterns = [
     path('admin-panel/', pages.admin_panel, name='admin-panel'),
     path('engineer/', pages.engineer, name='engineer'),
     path('supervisor/', pages.supervisor, name='supervisor'),
+    path('sops/<str:document_id>/<str:revision>/', sop_views.sop_pdf, name='sop-pdf'),
 ]
