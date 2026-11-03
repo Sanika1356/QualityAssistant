@@ -6,6 +6,7 @@ from . import pages
 urlpatterns = [
     path('', pages.home, name='home'),
     path('login/', pages.login_page, name='login'),
+    path('signup/', pages.signup_page, name='signup'),
     path('admin-panel/', pages.admin_panel, name='admin-panel'),
     path('engineer/', pages.engineer, name='engineer'),
     path('supervisor/', pages.supervisor, name='supervisor'),

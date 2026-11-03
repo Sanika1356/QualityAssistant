@@ -21,9 +21,11 @@
     setBusy(button, true, 'Signing in…');
     try {
       const next = new URLSearchParams(window.location.search).get('next') || '';
+      // The role is only a label; the server checks it against the account's real group.
+      const role = form.dataset.role || '';
       const result = await api('/api/login/', {
         method: 'POST',
-        body: { username, password, next },
+        body: { username, password, next, role },
         redirectOnSignOut: false,
       });
       window.location.assign(result.redirect);

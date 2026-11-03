@@ -27,6 +27,13 @@ class IsEngineerOrSupervisor(BasePermission):
         return in_group(request.user, ENGINEER) or in_group(request.user, SUPERVISOR)
 
 
+class HasAnyRole(BasePermission):
+    message = 'Only Administrators, Engineers and Supervisors can view model metrics.'
+
+    def has_permission(self, request, view):
+        return any(in_group(request.user, role) for role in (ADMINISTRATOR, ENGINEER, SUPERVISOR))
+
+
 class IsSupervisor(BasePermission):
     message = 'Only Supervisors can review inspections.'
 

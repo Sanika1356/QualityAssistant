@@ -1,48 +1,43 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Sign in{% endblock %}
-{% block body_class %}login-body{% endblock %}
-{% block header %}{% endblock %}
+{% block title %}{% if chosen_role %}{{ chosen_role }} sign in{% else %}Sign in{% endif %}{% endblock %}
+{% block header %}{% include "partials/public_header.html" %}{% endblock %}
 
-{% block main %}
-<main id="main" class="login-wrap" tabindex="-1">
-  <div class="login-card">
-    <section class="login-intro" aria-labelledby="intro-title">
-      <div class="d-flex align-items-center gap-2 fw-semibold text-white">
-        {% include "partials/brand_mark.html" %}
-        Visual Inspection
+{% block content %}
+<section class="auth-card panel" aria-labelledby="login-title">
+  <div class="panel-body p-4">
+    <h1 id="login-title" class="h3 mb-1">{% if chosen_role %}{{ chosen_role }} sign in{% else %}Sign in{% endif %}</h1>
+    <p class="muted mb-4">Use the account your administrator gave you.</p>
+
+    {% if account_created %}
+      <div class="alert alert-success" role="status">Account created. Sign in with your new password.</div>
+    {% endif %}
+    <div id="login-alert" hidden></div>
+
+    <form id="login-form" novalidate data-role="{{ chosen_key }}">
+      <div class="mb-3">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-control" id="username" name="username" type="text" value="{{ prefill_username }}"
+               autocomplete="username" autocapitalize="none" spellcheck="false" required
+               {% if not prefill_username %}autofocus{% endif %}>
       </div>
-      <h1 id="intro-title">Metal plate quality check</h1>
-      <p>Upload plate images, see whether each plate is normal or defective, and have a supervisor confirm the result.</p>
-      <ol class="login-steps">
-        <li><span class="step-no">1</span><span>Engineers upload a batch of up to 10 plate images.</span></li>
-        <li><span class="step-no">2</span><span>The model checks every image and marks it normal or defective.</span></li>
-        <li><span class="step-no">3</span><span>Supervisors review results and correct them when needed.</span></li>
-      </ol>
-    </section>
+      <div class="mb-4">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-control" id="password" name="password" type="password"
+               autocomplete="current-password" required {% if prefill_username %}autofocus{% endif %}>
+      </div>
+      <button class="btn btn-primary w-100" type="submit">Sign in</button>
+    </form>
 
-    <section class="login-form" aria-labelledby="login-title">
-      <h2 id="login-title">Sign in</h2>
-      <p class="muted mb-4">Use the account your administrator gave you.</p>
-
-      <div id="login-alert" hidden></div>
-
-      <form id="login-form" novalidate>
-        <div class="mb-3">
-          <label class="form-label" for="username">Username</label>
-          <input class="form-control" id="username" name="username" type="text"
-                 autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
-        </div>
-        <div class="mb-4">
-          <label class="form-label" for="password">Password</label>
-          <input class="form-control" id="password" name="password" type="password"
-                 autocomplete="current-password" required>
-        </div>
-        <button class="btn btn-primary w-100 py-2" type="submit">Sign in</button>
-      </form>
-    </section>
+    <p class="small mt-4 mb-0 text-center">
+      {% if signup_allowed %}
+        New engineer? <a href="{% url 'signup' %}">Create an account</a>
+      {% else %}
+        <span class="muted">Accounts for this role are created by an administrator.</span>
+      {% endif %}
+    </p>
   </div>
-</main>
+</section>
 {% endblock %}
 
 {% block scripts %}

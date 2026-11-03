@@ -1,0 +1,17 @@
+{# Header for logged-out pages: app name left, role sign-in buttons right. #}
+<header class="app-header">
+  <nav class="navbar navbar-dark" aria-label="Main">
+    <div class="container-lg flex-wrap gap-2">
+      <a class="navbar-brand" href="{% url 'home' %}">
+        {% include "partials/brand_mark.html" %}
+        <span>Visual Inspection<span class="brand-sub">Metal plate quality check</span></span>
+      </a>
+      <div class="role-links" aria-label="Sign in as">
+        {% for key, name in public_roles %}
+          <a class="btn btn-sm {% if chosen_key == key %}btn-light{% else %}btn-outline-light{% endif %}"
+             href="{% url 'login' %}?role={{ key }}"{% if chosen_key == key %} aria-current="page"{% endif %}>{{ name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </nav>
+</header>

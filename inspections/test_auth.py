@@ -188,8 +188,12 @@ class PageAccessTests(AuthTestBase):
                 response = self.client.get(page)
                 self.assertRedirects(response, f'/login/?next={page}', fetch_redirect_response=False)
 
-    def test_root_redirects(self):
-        self.assertRedirects(self.client.get('/'), '/login/', fetch_redirect_response=False)
+    def test_root_shows_home_or_redirects(self):
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pages/home.html')
+        for key in ('administrator', 'engineer', 'supervisor'):
+            self.assertContains(response, f'href="/login/?role={key}"')
         for role, page in PAGES.items():
             with self.subTest(role):
                 self.client.force_login(self.users[role])
@@ -222,12 +226,19 @@ class PageAccessTests(AuthTestBase):
             with self.subTest(path):
                 self.assertIsNotNone(finders.find(path))
 
-    def test_placeholders_name_the_teammate(self):
-        for role in ('Engineer', 'Supervisor'):
+    def test_real_screens_replaced_the_placeholders(self):
+        markers = {
+            'Engineer': ['id="single-form"', 'id="batch-form"', 'id="history-body"', 'js/screens/engineer.js'],
+            'Supervisor': ['id="sup-body"', 'data-metrics-panel', 'js/screens/supervisor.js', 'js/metrics.js'],
+        }
+        for role, expected in markers.items():
             with self.subTest(role):
                 self.client.force_login(self.users[role])
                 response = self.client.get(PAGES[role])
-                self.assertContains(response, 'Placeholder · Person 4')
+                for marker in expected:
+                    self.assertContains(response, marker)
+                self.assertNotContains(response, 'Placeholder')
+                self.assertNotContains(response, 'data-placeholder')
                 self.assertNotContains(response, 'coming soon')
 
 

@@ -80,9 +80,9 @@
   }
 
   async function api(path, options = {}) {
-    const { body, headers = {}, redirectOnSignOut = true } = options;
+    const { body, headers = {}, redirectOnSignOut = true, signal } = options;
     const method = (options.method || 'GET').toUpperCase();
-    const init = { method, credentials: 'same-origin', headers: { Accept: 'application/json', ...headers } };
+    const init = { method, credentials: 'same-origin', headers: { Accept: 'application/json', ...headers }, signal };
 
     if (body instanceof FormData) {
       init.body = body; // the browser sets the multipart boundary itself
@@ -98,6 +98,7 @@
     try {
       response = await fetch(path, init);
     } catch (networkError) {
+      if (networkError.name === 'AbortError') throw networkError; // cancelled on purpose (e.g. leaving the page)
       throw new ApiError('Could not reach the server. Check your connection and try again.', 0, null);
     }
 

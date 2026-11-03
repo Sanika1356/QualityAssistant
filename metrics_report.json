@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-11-03T01:10:54.775669+00:00",
+  "command": "python manage.py evaluate_samples",
+  "model_version": "BIT-PLATE-CV-1.0",
+  "decision_threshold": 0.5,
+  "images_found": 60,
+  "sample_count": 60,
+  "classes": [
+    "Normal",
+    "Defective"
+  ],
+  "confusion_matrix": {
+    "rows": "actual",
+    "columns": "predicted",
+    "order": [
+      "Normal",
+      "Defective"
+    ],
+    "values": [
+      [
+        30,
+        0
+      ],
+      [
+        0,
+        30
+      ]
+    ]
+  },
+  "tp": 30,
+  "fn": 0,
+  "fp": 0,
+  "tn": 30,
+  "defect_recall": 1.0,
+  "accuracy": 1.0,
+  "failures": [],
+  "misclassified": [],
+  "limitation": "These are 60 synthetic images with fixed framing. A perfect score here cannot establish how the model will perform on real factory images."
+}
