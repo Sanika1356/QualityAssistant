@@ -16,6 +16,10 @@
     <a class="nav-link" id="tab-metrics" data-bs-toggle="pill" href="#metrics" role="tab"
        aria-controls="metrics" aria-selected="false">Model metrics</a>
   </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="tab-incidents" data-bs-toggle="pill" href="#incidents" role="tab"
+       aria-controls="incidents" aria-selected="false">Incidents</a>
+  </li>
 </ul>
 
 <div class="tab-content">
@@ -60,10 +64,36 @@
   <section class="tab-pane fade" id="metrics" role="tabpanel" aria-labelledby="tab-metrics" tabindex="0">
     {% include "partials/metrics_panel.html" %}
   </section>
+
+  {# Round 3: incidents #}
+  <section class="tab-pane fade" id="incidents" role="tabpanel" aria-labelledby="tab-incidents" tabindex="0">
+    <section class="panel" aria-labelledby="incidents-title">
+      <div class="panel-head">
+        <h2 id="incidents-title">All incidents</h2>
+        <span class="muted small" id="incidents-count" aria-live="polite"></span>
+      </div>
+      <div class="toolbar">
+        <div class="field">
+          <label class="form-label" for="incidents-filter">Decision</label>
+          <select class="form-select" id="incidents-filter">
+            <option value="">All decisions</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved for follow-up">Approved for follow-up</option>
+            <option value="Needs more information">Needs more information</option>
+          </select>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-primary" id="incidents-refresh">Refresh</button>
+        </div>
+      </div>
+      <div id="incidents-body"></div>
+    </section>
+  </section>
 </div>
 
 {% include "partials/inspection_dialog.html" %}
 
 {# defer: runs after the page and Bootstrap (loaded at the end of base.html) are ready. #}
 <script defer src="{% static 'js/metrics.js' %}"></script>
+<script defer src="{% static 'js/incidents.js' %}"></script>
 <script defer src="{% static 'js/screens/supervisor.js' %}"></script>

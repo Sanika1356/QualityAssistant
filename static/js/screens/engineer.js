@@ -114,7 +114,7 @@
       `Saved as inspection #${item.id}. `,
       el('a', { href: '#history', text: 'See it in My history', onclick: (e) => { e.preventDefault(); showTab('#history'); } }),
       '.');
-    single.result.replaceChildren(card, footer);
+    single.result.replaceChildren(card, footer, window.Incidents.createPanel(item, loadIncidents));
   }
 
   wireDropzone(single.drop, single.input, chooseSingle);
@@ -392,7 +392,9 @@
 
   function openDetail(item) {
     UI.showDialog(`Inspection #${item.id} · ${item.original_filename}`,
-      UI.detailLayout(item, [UI.originalBlock(item), UI.reviewBlock(item)]));
+      UI.detailLayout(item, [
+        UI.originalBlock(item), UI.reviewBlock(item), window.Incidents.createPanel(item, loadIncidents),
+      ]));
   }
 
   hist.prediction.addEventListener('change', loadHistory);
@@ -407,6 +409,17 @@
     if (historyStale) loadHistory();
   });
   if (window.location.hash === '#history') loadHistory();
+
+  /* ================= Round 3: my incidents ================= */
+  const loadIncidents = window.Incidents.listScreen({
+    body: document.getElementById('incidents-body'),
+    count: document.getElementById('incidents-count'),
+    refresh: document.getElementById('incidents-refresh'),
+    canDecide: false,
+    showEngineer: false,
+  });
+  document.getElementById('tab-incidents').addEventListener('shown.bs.tab', loadIncidents);
+  if (window.location.hash === '#incidents') loadIncidents();
 
   loadProducts();
   restoreLastSingle();

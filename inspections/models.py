@@ -88,3 +88,82 @@ class Review(models.Model):
 
     def __str__(self):
         return f'Review for inspection {self.inspection_id}'
+
+class Incident(models.Model):
+    """Round 3 incident record, separate from the original inspection and review."""
+
+    class EvidenceStatus(models.TextChoices):
+        SUFFICIENT = 'Sufficient', 'Sufficient'
+        INSUFFICIENT = 'Insufficient', 'Insufficient'
+
+    class Decision(models.TextChoices):
+        PENDING = 'Pending', 'Pending'
+        APPROVED = 'Approved for follow-up', 'Approved for follow-up'
+        NEEDS_MORE_INFO = 'Needs more information', 'Needs more information'
+
+    # UUID gives each incident a stable, unique public identifier.
+    incident_id = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+    )
+
+    # One incident maximum for each inspection, enforced by the database.
+    inspection = models.OneToOneField(
+        Inspection,
+        on_delete=models.PROTECT,
+        related_name='incident',
+    )
+
+    # Snapshots: later changes to related records cannot change this incident's history.
+    product_id_snapshot = models.CharField(max_length=50)
+    product_name_snapshot = models.CharField(max_length=200)
+    original_prediction = models.CharField(
+        max_length=20,
+        choices=Inspection.PredictedClass.choices,
+    )
+    original_confidence = models.FloatField(null=True, blank=True)
+    original_defect_probability = models.FloatField(null=True, blank=True)
+    model_version_snapshot = models.CharField(max_length=50, blank=True)
+
+    # Generated incident content and its supporting references.
+    summary = models.TextField(blank=True)
+    actions = models.JSONField(default=list)
+    sources = models.JSONField(default=list)
+    evidence_status = models.CharField(
+        max_length=20,
+        choices=EvidenceStatus.choices,
+        default=EvidenceStatus.INSUFFICIENT,
+    )
+    evidence_reason = models.TextField(blank=True)
+    manual_review_required = models.BooleanField(default=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='created_incidents',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Round 3 Supervisor decision; independent of the Round 2 Review model.
+    decision = models.CharField(
+        max_length=40,
+        choices=Decision.choices,
+        default=Decision.PENDING,
+    )
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='reviewed_incidents',
+        null=True,
+        blank=True,
+    )
+    review_comment = models.TextField(blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Incident {self.incident_id} for inspection {self.inspection_id}'

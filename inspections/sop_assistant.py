@@ -112,11 +112,22 @@ def _lot_reference(inspection):
     return 'Not provided'
 
 
+def format_percent(value):
+    """Same rule as percent() in static/js/ui.js: never print 100%."""
+    if value is None:
+        return 'Not recorded'
+    pct = float(value) * 100
+    # The model is uncalibrated and never truly certain.
+    if pct >= 99.95:
+        return '> 99.9%'
+    if pct < 0.05:
+        return '< 0.1%'
+    return f'{pct:.1f}%'
+
+
 def build_summary(inspection):
     product = inspection.product
-    confidence = (
-        f'{inspection.confidence * 100:.1f}%' if inspection.confidence is not None else 'Not recorded'
-    )
+    confidence = format_percent(inspection.confidence)
     return (
         f'Inspection {inspection.pk} of product {product.product_id} ({product.name}), '
         f'submitted by {inspection.submitted_by.get_username()} at {_format_time(inspection.created_at)}, '

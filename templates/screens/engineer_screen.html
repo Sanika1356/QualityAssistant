@@ -20,6 +20,10 @@
     <a class="nav-link" id="tab-history" data-bs-toggle="pill" href="#history" role="tab"
        aria-controls="history" aria-selected="false">My history</a>
   </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="tab-incidents" data-bs-toggle="pill" href="#incidents" role="tab"
+       aria-controls="incidents" aria-selected="false">My incidents</a>
+  </li>
 </ul>
 
 <div class="tab-content">
@@ -154,9 +158,24 @@
       <div id="history-body"></div>
     </section>
   </section>
+
+  {# ---------------- Round 3: incidents ---------------- #}
+  <section class="tab-pane fade" id="incidents" role="tabpanel" aria-labelledby="tab-incidents" tabindex="0">
+    <section class="panel" aria-labelledby="incidents-title">
+      <div class="panel-head">
+        <h2 id="incidents-title">My incidents</h2>
+        <span class="muted small" id="incidents-count" aria-live="polite"></span>
+      </div>
+      <div class="toolbar">
+        <button type="button" class="btn btn-outline-primary" id="incidents-refresh">Refresh</button>
+      </div>
+      <div id="incidents-body"></div>
+    </section>
+  </section>
 </div>
 
 {% include "partials/inspection_dialog.html" %}
 
 {# defer: runs after the page and Bootstrap (loaded at the end of base.html) are ready. #}
+<script defer src="{% static 'js/incidents.js' %}"></script>
 <script defer src="{% static 'js/screens/engineer.js' %}"></script>

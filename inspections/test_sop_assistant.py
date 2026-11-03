@@ -284,6 +284,22 @@ class SummaryAndRecordTests(SopTestBase):
         self.assertNotIn('confirmed', summary.lower())
         self.assertIsNone(result['human_correction'])
 
+    def test_confidence_never_printed_as_100_percent(self):
+        cases = [
+            (1.0, '> 99.9%'), (0.9999999999999996, '> 99.9%'), (0.9995, '> 99.9%'),
+            (0.9994, '99.9%'), (0.97, '97.0%'), (0.0005, '0.1%'), (0.0004, '< 0.1%'),
+            (0.0, '< 0.1%'), (None, 'Not recorded'),
+        ]
+        for value, expected in cases:
+            with self.subTest(value=value):
+                self.assertEqual(sop_assistant.format_percent(value), expected)
+
+        self.inspection = self.make_inspection(self.plate, confidence=1.0)
+        summary = sop_assistant.build_summary(self.inspection)
+        self.assertIn('confidence > 99.9%', summary)
+        self.assertNotIn('100.0%', summary)
+        self.assertNotIn('100%', summary)
+
     def test_human_correction_kept_separate_and_nothing_overwritten(self):
         supervisor = User.objects.create_user(username='sup', password='pass12345')
         Review.objects.create(inspection=self.inspection, reviewed_class='Normal',
