@@ -1,8 +1,10 @@
-# Visual Inspection
+# Visual Inspection and Quality Incident Assistant
 
 A web application that checks images of a metal plate with a supplied Computer Vision classifier, records each inspection, processes image batches in the background, and lets a Supervisor confirm or correct each result.
 
-Built for Round 2 of the Python Full Stack and AI Hackathon.
+Round 3 adds quality incidents: an Engineer turns a saved Defective inspection into an incident, the app retrieves the product's quality SOPs and writes a cited summary and suggested actions, and a Supervisor records a decision. See [Round 3: quality incidents](#round-3-quality-incidents).
+
+Built for Rounds 2 and 3 of the Python Full Stack and AI Hackathon.
 
 The images and model are educational demonstrations, not a real factory inspection tool.
 
@@ -98,8 +100,8 @@ You need Python, PostgreSQL and Redis.
 **1. Get the code and install packages**
 
 ```powershell
-git clone https://github.com/Sanika1356/VisualInspection.git
-cd VisualInspection
+git clone https://github.com/Sanika1356/QualityAssistant.git
+cd QualityAssistant
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -129,7 +131,10 @@ python manage.py migrate
 python manage.py load_products
 python manage.py seed_demo
 python manage.py evaluate_samples
+python manage.py index_sops
 ```
+
+`index_sops` indexes only the SOP PDFs named in `pack_data/product_sop_mapping.csv` (Round 3). For AI-generated incident actions, also set `GROQ_API_KEY` in `.env`.
 
 ## Run the application
 
@@ -192,6 +197,8 @@ python manage.py test
 
 The tests do not need Redis or a running worker. They cover invalid image rejection, Supervisor-only review, result persistence, batch limits, mixed batches, role permissions and login.
 
+The Round 3 tests do not need Groq; the AI reply is mocked. They cover duplicate requests, Normal rejection, missing evidence, source isolation, citation checks and Engineer review denial.
+
 ## Demonstration steps
 
 1. **Administrator:** show product `P-PLATE01`.
@@ -201,20 +208,74 @@ The tests do not need Redis or a running worker. They cover invalid image reject
 5. **Engineer:** attempt a review through the API, and show the `403`.
 6. **Supervisor:** explain the confusion matrix, defect recall and the limitation.
 
+## Round 3: quality incidents
+
+### Workflow
+
+```text
+Saved Round 2 inspection (original prediction: Defective)
+        |  Engineer clicks Create incident
+        v
+product_id -> product_sop_mapping.csv -> only that product's SOPs and revisions
+        |  search passages (P-PLATE01 must use both Q-PLATE-01 and Q-PLATE-02)
+        v
+Groq writes short actions, each citing passage numbers
+        |  code rejects missing or invented citations and unsupported claims
+        v
+Incident saved once per inspection: Sufficient, or Insufficient + Manual review required
+        |
+        v
+Supervisor: Approved for follow-up or Needs more information, with a required comment
+```
+
+- **Eligibility:** only the Engineer's own `completed` inspections whose original prediction is Defective. Normal, queued, processing and failed inspections get a clear message and no incident. A human correction is shown separately and does not change eligibility.
+- **One incident per inspection:** enforced by the database. A repeat request returns the same incident unchanged.
+- **Summary:** written from the saved inspection, not by the AI. It says "flagged by the classifier" and never states a defect type, cause or severity.
+- **Sources:** each action shows the document ID, revision, one-based PDF page, the passage, and an `Open page` link to `/sops/<document_id>/<revision>/#page=N` (sign-in required).
+- **Insufficient evidence:** a missing mapping or SOP, no relevant passage, or an AI failure saves one Insufficient incident with a readable reason, "Manual review required" and no actions. General AI knowledge is never used to fill the gap.
+- **Decisions:** stored separately from the Round 2 review. Insufficient incidents cannot be approved. Approval authorises follow-up only, not product release.
+
+### Round 3 API
+
+| Method | Address | Who | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/incidents/` | Engineer (own), Supervisor (all) | List incidents |
+| POST | `/api/incidents/` | Engineer | Create or return the incident, with `inspection_id` |
+| GET | `/api/incidents/<incident_id>/` | Engineer (own), Supervisor (all) | One incident |
+| POST | `/api/incidents/<incident_id>/decision/` | Supervisor | `decision` and required `review_comment` |
+| GET | `/sops/<document_id>/<revision>/` | Signed-in users | Open a mapped SOP PDF |
+
+An Administrator alone cannot view or review incidents.
+
+### Round 3 demonstration
+
+1. **Engineer:** in My history, open a completed Defective inspection and click **Create incident**. Show the evidence status and reason, the actions, **Documents used** (Q-PLATE-01 and Q-PLATE-02), and click **Open page** on a citation.
+2. **Engineer:** click **Create incident** again. The incident ID and the My incidents count stay the same.
+3. **Engineer:** open a Normal inspection and click **Create incident**. A message appears and no incident is created.
+4. **Engineer:** rename `pack_data\SOPs\Q_PLATE_02_Review_Rev1_0.pdf`, create an incident for a fresh Defective inspection, and show Insufficient and Manual review required. Rename the file back.
+5. **Engineer:** in an incident, click **Attempt review as Engineer**. The server refuses with "Only Supervisors can review incidents."
+6. **Supervisor:** in the Incidents tab, review the incident with a comment, then reload and open it again to show the inspection, original output, recommendations, sources and saved review.
+
+### Reused from earlier rounds
+
+- **Round 2 (this project):** sign-in, roles and server-side permissions, saved inspections and their images, the original model results, Supervisor reviews, the PostgreSQL database and the screens. The model, inference code and 0.5 threshold are unchanged.
+- **Round 1 (Manufacturing Manual Assistant):** the retrieval approach. Passages are embedded with `all-MiniLM-L6-v2`, the search is restricted before ranking and checked again afterwards, each required document gets a place in the results, and the Groq call, citation rules and citation clean-up follow the Round 1 code. The Round 1 equipment manuals are not used.
+
 ## Project layout
 
 ```text
 config/              Django settings, URLs and Celery setup
 inspections/         Models, APIs, pages, upload checks, background task and tests
 inspections/model/   Supplied model and inference helper (unchanged)
-pack_data/           Supplied samples, labels, validation files and product details
+inspections/sop_*.py Round 3 SOP loading, search, and incident content
+pack_data/           Supplied samples, labels, validation files, product details, SOPs and mapping
 templates/           Page templates
 static/              CSS, JavaScript and local Bootstrap
 ```
 
-## Reused from Round 1
+## Reused from Round 1 (Round 2 build)
 
-This is a separate project from our Round 1 Manufacturing Manual Assistant. No Round 1 application code was copied in. We reused ideas from Round 1: the same three roles, group-based permissions, a similar REST API and CSRF approach, and demo accounts created by a command. The inspection workflow was built during Round 2.
+This is a separate project from our Round 1 Manufacturing Manual Assistant. For Round 2, no Round 1 application code was copied in. Round 3 adapted the Round 1 retrieval and Groq code; see [Reused from earlier rounds](#reused-from-earlier-rounds). We reused ideas from Round 1: the same three roles, group-based permissions, a similar REST API and CSRF approach, and demo accounts created by a command. The inspection workflow was built during Round 2.
 
 ## Security notes
 
