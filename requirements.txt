@@ -23,3 +23,6 @@ tzdata==2026.6
 tzlocal==5.4.5
 vine==5.1.0
 wcwidth==0.9.4
+groq==1.7.0
+PyMuPDF==2.1
+sentence-transformers==6.2.0
