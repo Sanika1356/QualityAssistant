@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Create an account{% endblock %}
+{% block header %}{% include "partials/public_header.html" %}{% endblock %}
+
+{% block content %}
+<section class="auth-card panel" aria-labelledby="signup-title">
+  <div class="panel-body p-4">
+    <h1 id="signup-title" class="h3 mb-1">Create an account</h1>
+    <p class="muted mb-4">New accounts are Engineer accounts.</p>
+
+    <div id="signup-alert" hidden></div>
+
+    <form id="signup-form" novalidate>
+      <div class="mb-3">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-control" id="username" name="username" type="text" maxlength="150" required
+               autocomplete="username" autocapitalize="none" spellcheck="false" autofocus
+               aria-describedby="username-error">
+        <div id="username-error" class="invalid-feedback" data-error-for="username"></div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-control" id="password" name="password" type="password" required
+               autocomplete="new-password" aria-describedby="password-help password-error">
+        <div id="password-help" class="form-text">At least 8 characters. Not only numbers, and not a common password.</div>
+        <div id="password-error" class="invalid-feedback" data-error-for="password"></div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label" for="password2">Repeat password</label>
+        <input class="form-control" id="password2" name="password2" type="password" required
+               autocomplete="new-password" aria-describedby="password2-error">
+        <div id="password2-error" class="invalid-feedback" data-error-for="password2"></div>
+      </div>
+      <button class="btn btn-primary w-100" type="submit">Create account</button>
+    </form>
+
+    <p class="small mt-4 mb-0 text-center">Already have an account?
+      <a href="{% url 'login' %}?role=engineer">Sign in</a></p>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/signup.js' %}"></script>
+{% endblock %}

@@ -1,5 +1,9 @@
 """Session login API for the browser pages: /api/csrf/, /api/login/, /api/logout/, /api/me/."""
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import Group, User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -8,7 +12,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .roles import DASHBOARDS, RoleError, get_role
+from .permissions import ENGINEER
+from .roles import DASHBOARDS, RoleError, get_role, role_from_key, with_article
 
 
 def safe_next(request, role):
@@ -55,8 +60,62 @@ class LoginView(APIView):
         except RoleError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
+        # The role chosen on the sign-in page is only a label; it must match the account's real group.
+        chosen = role_from_key(request.data.get('role'))
+        if chosen and chosen != role:
+            logout(request)
+            return Response(
+                {'detail': f"This account isn't {with_article(chosen)} account. Use the correct sign-in."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         login(request, user)
         return Response({'username': user.username, 'role': role, 'redirect': safe_next(request, role)})
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class SignupView(APIView):
+    """Self-registration. New accounts are always Engineers; any other role or flag sent in is ignored."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = str(request.data.get('username') or '').strip()
+        password = str(request.data.get('password') or '')
+        errors = {}
+
+        if not username:
+            errors['username'] = ['Enter a username.']
+        else:
+            try:
+                User._meta.get_field('username').run_validators(username)
+            except ValidationError as exc:
+                errors['username'] = list(exc.messages)
+            if 'username' not in errors and User.objects.filter(username__iexact=username).exists():
+                errors['username'] = ['An account with this username already exists.']
+
+        if not password:
+            errors['password'] = ['Enter a password.']
+        else:
+            try:
+                validate_password(password, user=User(username=username))
+            except ValidationError as exc:
+                errors['password'] = list(exc.messages)
+
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                # Only username and password are used: is_staff/is_superuser/role/groups are never read.
+                user = User.objects.create_user(username=username, password=password)
+                user.groups.add(Group.objects.get_or_create(name=ENGINEER)[0])
+        except IntegrityError:
+            return Response(
+                {'username': ['An account with this username already exists.']}, status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response({'username': user.username, 'role': ENGINEER}, status=status.HTTP_201_CREATED)
 
 
 @method_decorator(csrf_protect, name='dispatch')

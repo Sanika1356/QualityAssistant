@@ -134,11 +134,15 @@ class ScreenTests(TestCase):
                 self.assertContains(response, 'js/api.js')
                 self.assertContains(response, 'js/ui.js')
 
-    def test_admin_page_shows_metrics_panel(self):
+    def test_metrics_panel_only_on_supervisor_page(self):
         self.client.force_login(self.users['Administrator'])
         response = self.client.get('/admin-panel/')
-        self.assertContains(response, 'data-metrics-panel')
-        self.assertContains(response, 'js/metrics.js')
+        self.assertNotContains(response, 'data-metrics-panel')
+        self.assertNotContains(response, 'js/metrics.js')
+        self.assertContains(response, 'Register a product')
+        self.assertContains(response, 'Product library')
+        self.client.force_login(self.users['Supervisor'])
+        self.assertContains(self.client.get('/supervisor/'), 'data-metrics-panel')
 
     def test_new_static_files_are_found(self):
         for path in ('js/ui.js', 'js/metrics.js', 'js/screens/engineer.js', 'js/screens/supervisor.js'):

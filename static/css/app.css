@@ -311,112 +311,72 @@ h1, h2, h3, .h1, .h2, .h3 {
   font-size: 0.75em;
 }
 
-/* ---------- Teammate placeholder ---------- */
-.handoff {
-  border: 2px dashed var(--vi-steel-500);
-  border-radius: var(--vi-radius);
-  background: repeating-linear-gradient(
-    -45deg, #f7f9fc, #f7f9fc 12px, #eef3f8 12px, #eef3f8 24px
-  );
-  padding: 1.5rem;
-}
-.handoff-tag {
-  display: inline-block;
-  margin-bottom: 0.75rem;
-  padding: 0.2rem 0.7rem;
-  border-radius: 999px;
-  background: var(--vi-steel-900);
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 650;
-  letter-spacing: 0.03em;
-}
-.handoff code {
-  color: var(--vi-steel-900);
-}
-
-/* ---------- Login ---------- */
-.login-body {
-  background:
-    radial-gradient(1200px 500px at 0% 0%, #2c4a66 0%, transparent 60%),
-    linear-gradient(160deg, #1b2a38 0%, #22384d 55%, #2c4a66 100%);
-}
-.login-wrap {
-  flex: 1 0 auto;
-  display: grid;
-  place-items: center;
-  padding: 2rem 1rem;
-}
-.login-card {
-  width: 100%;
-  max-width: 56rem;
-  display: grid;
-  grid-template-columns: 1fr;
-  overflow: hidden;
-  border-radius: 1rem;
-  background: var(--vi-card);
-  box-shadow: 0 20px 50px rgba(8, 15, 24, 0.35);
-}
-.login-intro {
-  padding: 2rem;
-  color: #e6edf4;
-  background:
-    linear-gradient(0deg, rgba(27, 42, 56, 0.92), rgba(27, 42, 56, 0.92)),
-    repeating-linear-gradient(90deg, #3a5a78 0 1px, transparent 1px 22px),
-    repeating-linear-gradient(0deg, #3a5a78 0 1px, transparent 1px 22px);
-}
-.login-intro h1 {
-  color: #fff;
-  font-size: 1.5rem;
-  margin: 1.25rem 0 0.75rem;
-}
-.login-intro p {
-  color: #c4d1de;
-  margin-bottom: 1.25rem;
-}
-.login-steps {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 0.75rem;
-}
-.login-steps li {
+/* ---------- Public pages: home, sign in, sign up ---------- */
+.role-links {
   display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-  color: #dbe4ed;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
 }
-.login-steps .step-no {
+.public-column {
+  max-width: 44rem;
+  margin: 1rem auto 0;
+}
+.home-title {
+  font-size: clamp(1.7rem, 4vw, 2.3rem);
+  margin-bottom: 0.75rem;
+}
+.how-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 1.25rem;
+}
+.how-list li {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  padding: 0.85rem 0;
+}
+.how-list li + li {
+  border-top: 1px solid var(--vi-line);
+}
+.step-no {
   flex: none;
   display: grid;
   place-items: center;
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: 50%;
-  border: 1px solid #7e9bb8;
-  font-size: 0.8rem;
-  font-weight: 650;
-  color: #fff;
+  background: var(--vi-steel-100);
+  color: var(--vi-steel-900);
+  font-size: 0.85rem;
+  font-weight: 700;
 }
-.login-form {
-  padding: 2rem;
+.auth-card {
+  max-width: 26rem;
+  margin: 1rem auto 0;
 }
-.login-form h2 {
-  font-size: 1.35rem;
-  margin-bottom: 0.25rem;
+
+/* ---------- Administrator page: one centred column ---------- */
+.admin-column {
+  max-width: 900px;
+  margin-inline: auto;
 }
-.login-form .form-control {
-  padding: 0.65rem 0.9rem;
+.library-search {
+  flex: 0 1 15rem;
 }
-@media (min-width: 768px) {
-  .login-card {
-    grid-template-columns: 1.05fr 1fr;
-  }
-  .login-intro,
-  .login-form {
-    padding: 2.75rem;
-  }
+.product-table {
+  table-layout: fixed;
+}
+.product-table th:nth-child(1) { width: 9.5rem; }
+.product-table th:nth-child(2) { width: 30%; }
+.product-table td {
+  overflow-wrap: break-word;
+}
+@media (max-width: 575.98px) {
+  .product-table th:nth-child(1) { width: 7rem; }
+  .product-table th:nth-child(2) { width: 32%; }
+  .library-search { flex-basis: 100%; }
 }
 
 /* ---------- Error page ---------- */
@@ -434,23 +394,6 @@ h1, h2, h3, .h1, .h2, .h3 {
   border-radius: 999px;
   padding: 0.2rem 0.8rem;
   margin-bottom: 1rem;
-}
-
-@media (max-width: 767.98px) {
-  /* Keep the sign-in form near the top on phones. */
-  .login-steps {
-    display: none;
-  }
-  .login-intro {
-    padding: 1.5rem 1.5rem 1.25rem;
-  }
-  .login-intro h1 {
-    margin-top: 0.9rem;
-    font-size: 1.3rem;
-  }
-  .login-intro p {
-    margin-bottom: 0;
-  }
 }
 
 @media (max-width: 575.98px) {
@@ -1184,13 +1127,6 @@ h1, h2, h3, .h1, .h2, .h3 {
   line-height: 1;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-}
-.limitation {
-  border-left: 4px solid #d08a2c;
-  background: var(--vi-failed-bg);
-  color: #5b3500;
-  border-radius: 0.6rem;
-  padding: 0.9rem 1rem;
 }
 .cmd {
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;

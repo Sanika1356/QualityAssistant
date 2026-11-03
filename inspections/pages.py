@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .permissions import ADMINISTRATOR, ENGINEER, SUPERVISOR
-from .roles import DASHBOARDS, RoleError, get_role, role_or_none
+from .roles import DASHBOARDS, ROLE_KEYS, RoleError, get_role, role_from_key, role_or_none
 
 
 def role_required(role):
@@ -32,9 +32,14 @@ def role_required(role):
     return decorator
 
 
+PUBLIC_ROLES = [(key, name) for key, name in ROLE_KEYS.items()]
+
+
 def home(request):
     role = role_or_none(request.user)
-    return redirect(DASHBOARDS[role] if role else 'login')
+    if role:
+        return redirect(DASHBOARDS[role])
+    return render(request, 'pages/home.html', {'public_roles': PUBLIC_ROLES})
 
 
 @ensure_csrf_cookie
@@ -42,7 +47,23 @@ def login_page(request):
     role = role_or_none(request.user)
     if role:
         return redirect(DASHBOARDS[role])
-    return render(request, 'pages/login.html')
+    chosen = role_from_key(request.GET.get('role'))  # unknown values become None: plain sign-in
+    return render(request, 'pages/login.html', {
+        'public_roles': PUBLIC_ROLES,
+        'chosen_role': chosen,
+        'chosen_key': request.GET.get('role', '').strip().lower() if chosen else '',
+        'signup_allowed': chosen in (None, ENGINEER),
+        'prefill_username': request.GET.get('username', '')[:150],
+        'account_created': request.GET.get('created') == '1',
+    })
+
+
+@ensure_csrf_cookie
+def signup_page(request):
+    role = role_or_none(request.user)
+    if role:
+        return redirect(DASHBOARDS[role])
+    return render(request, 'pages/signup.html', {'public_roles': PUBLIC_ROLES, 'chosen_key': 'engineer'})
 
 
 @role_required(ADMINISTRATOR)

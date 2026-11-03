@@ -6,6 +6,7 @@ urlpatterns = [
     path('csrf/', auth_api.CsrfView.as_view(), name='api-csrf'),
     path('login/', auth_api.LoginView.as_view(), name='api-login'),
     path('logout/', auth_api.LogoutView.as_view(), name='api-logout'),
+    path('signup/', auth_api.SignupView.as_view(), name='api-signup'),
     path('me/', auth_api.MeView.as_view(), name='api-me'),
     path('metrics/', metrics_api.MetricsView.as_view(), name='api-metrics'),
     path('batches/', views.BatchCreateView.as_view(), name='batch-create'),

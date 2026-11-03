@@ -11,6 +11,23 @@ DASHBOARDS = {
 }
 
 
+# ?role= values on the sign-in page. A label only: access always comes from the account's group.
+ROLE_KEYS = {
+    'administrator': ADMINISTRATOR,
+    'engineer': ENGINEER,
+    'supervisor': SUPERVISOR,
+}
+
+
+def role_from_key(value):
+    """Map a ?role= value to a role name, or None for missing/unknown values."""
+    return ROLE_KEYS.get(str(value or '').strip().lower())
+
+
+def with_article(role):
+    return f'an {role}' if role[0] in 'AEIOU' else f'a {role}'
+
+
 class RoleError(Exception):
     """The account cannot be used: it has no role, or more than one."""
 

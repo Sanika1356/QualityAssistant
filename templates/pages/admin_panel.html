@@ -3,78 +3,75 @@
 {% block title %}Products{% endblock %}
 
 {% block content %}
-<div class="page-head">
-  <div>
-    <h1>Products</h1>
-    <p class="lead-text">The plate types engineers can inspect. Each product needs a unique product ID.</p>
+<div class="admin-column">
+  <div class="page-head">
+    <div>
+      <h1>Products</h1>
+      <p class="lead-text">Register products and view the product library.</p>
+    </div>
   </div>
-</div>
 
-<div class="row g-4">
-  <div class="col-lg-8">
-    <section class="panel" aria-labelledby="products-title">
-      <div class="panel-head">
-        <h2 id="products-title">All products</h2>
+  <section class="panel" aria-labelledby="register-title">
+    <div class="panel-head"><h2 id="register-title">Register a product</h2></div>
+    <form class="panel-body" id="product-form" novalidate>
+      <div id="add-alert" hidden></div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="product_id">Product ID</label>
+          <input class="form-control" id="product_id" name="product_id" type="text" maxlength="50" required
+                 autocomplete="off" aria-describedby="product_id-help product_id-error">
+          <div id="product_id-help" class="form-text">For example P-PLATE02. Must be unique.</div>
+          <div id="product_id-error" class="invalid-feedback" data-error-for="product_id"></div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="name">Name</label>
+          <input class="form-control" id="name" name="name" type="text" maxlength="200" required
+                 autocomplete="off" aria-describedby="name-error">
+          <div id="name-error" class="invalid-feedback" data-error-for="name"></div>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="description">Description <span class="muted">(optional)</span></label>
+          <textarea class="form-control" id="description" name="description" rows="3"
+                    aria-describedby="description-error"></textarea>
+          <div id="description-error" class="invalid-feedback" data-error-for="description"></div>
+        </div>
+      </div>
+      <div class="d-flex justify-content-end mt-3">
+        <button class="btn btn-primary" type="submit">Register product</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel mt-4" aria-labelledby="library-title">
+    <div class="panel-head">
+      <div class="d-flex align-items-baseline gap-2">
+        <h2 id="library-title">Product library</h2>
         <span class="muted small" id="product-count" aria-live="polite"></span>
       </div>
-      <div id="products-alert" class="m-3" hidden></div>
-      <div id="products-loading" class="empty-state" role="status">Loading products…</div>
-      <div id="products-empty" class="empty-state" hidden>No products yet. Add the first one with the form.</div>
-      <div class="table-responsive" id="products-table-wrap" hidden>
-        <table class="table table-vi">
-          <thead>
-            <tr>
-              <th scope="col">Product ID</th>
-              <th scope="col">Name</th>
-              <th scope="col">Description</th>
-            </tr>
-          </thead>
-          <tbody id="products-body"></tbody>
-        </table>
+      <div class="library-search">
+        <label class="visually-hidden" for="product-search">Search products by ID or name</label>
+        <input class="form-control form-control-sm" type="search" id="product-search"
+               placeholder="Search ID or name" autocomplete="off">
       </div>
-    </section>
-  </div>
-
-  <div class="col-lg-4">
-    <section class="panel" aria-labelledby="add-title">
-      <div class="panel-head">
-        <h2 id="add-title">Add product</h2>
-      </div>
-      <div class="panel-body">
-        <div id="add-alert" hidden></div>
-        <form id="product-form" novalidate>
-          <div class="mb-3">
-            <label class="form-label" for="product_id">Product ID</label>
-            <input class="form-control" id="product_id" name="product_id" type="text" maxlength="50"
-                   required autocomplete="off" aria-describedby="product_id-help product_id-error">
-            <div id="product_id-help" class="form-text">For example P-PLATE02. Must be unique.</div>
-            <div id="product_id-error" class="invalid-feedback" data-error-for="product_id"></div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="name">Name</label>
-            <input class="form-control" id="name" name="name" type="text" maxlength="200" required
-                   autocomplete="off" aria-describedby="name-error">
-            <div id="name-error" class="invalid-feedback" data-error-for="name"></div>
-          </div>
-          <div class="mb-4">
-            <label class="form-label" for="description">Description <span class="muted">(optional)</span></label>
-            <textarea class="form-control" id="description" name="description" rows="3"
-                      aria-describedby="description-error"></textarea>
-            <div id="description-error" class="invalid-feedback" data-error-for="description"></div>
-          </div>
-          <button class="btn btn-primary w-100" type="submit">Add product</button>
-        </form>
-      </div>
-    </section>
-  </div>
-</div>
-
-<div class="mt-4">
-  {% include "partials/metrics_panel.html" %}
+    </div>
+    <div id="products-alert" class="m-3" hidden></div>
+    <div id="products-state" class="empty-state" role="status">Loading products…</div>
+    <div id="products-table-wrap" hidden>
+      <table class="table table-vi product-table">
+        <thead>
+          <tr>
+            <th scope="col">Product ID</th>
+            <th scope="col">Name</th>
+            <th scope="col">Description</th>
+          </tr>
+        </thead>
+        <tbody id="products-body"></tbody>
+      </table>
+    </div>
+  </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{% static 'js/admin_panel.js' %}"></script>
-<script src="{% static 'js/metrics.js' %}"></script>
 {% endblock %}

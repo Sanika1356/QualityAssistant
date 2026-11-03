@@ -188,8 +188,12 @@ class PageAccessTests(AuthTestBase):
                 response = self.client.get(page)
                 self.assertRedirects(response, f'/login/?next={page}', fetch_redirect_response=False)
 
-    def test_root_redirects(self):
-        self.assertRedirects(self.client.get('/'), '/login/', fetch_redirect_response=False)
+    def test_root_shows_home_or_redirects(self):
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pages/home.html')
+        for key in ('administrator', 'engineer', 'supervisor'):
+            self.assertContains(response, f'href="/login/?role={key}"')
         for role, page in PAGES.items():
             with self.subTest(role):
                 self.client.force_login(self.users[role])
