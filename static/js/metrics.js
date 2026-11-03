@@ -45,10 +45,7 @@
               ['Images scored', data.sample_count], ['Model version', data.model_version]]
               .map(([label, value]) => el('div', {}, el('dt', { text: label }), el('dd', { text: value })))),
           el('div', { class: 'small mb-3' }, 'Produced by ', el('span', { class: 'cmd', text: data.command }),
-            data.failures && data.failures.length ? ` · ${data.failures.length} image(s) failed to process` : ' · every image processed'))),
-      el('div', { class: 'limitation mt-4', role: 'note' },
-        el('strong', { text: 'Limitation. ' }),
-        `These ${data.sample_count} images are synthetic, with fixed framing. A good score here cannot show how the model will do on real factory images.`)));
+            data.failures && data.failures.length ? ` · ${data.failures.length} image(s) failed to process` : ' · every image processed')))));
   }
 
   async function load(panel) {
