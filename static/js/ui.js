@@ -299,15 +299,18 @@
     return dialog;
   }
 
-  /* Tabs that follow the URL hash, so /engineer/#batch opens the batch tab. */
+  /* Tabs that follow the URL hash, so /engineer/#batch opens the batch tab.
+   * A deeper hash such as #incidents/<id> opens the #incidents tab and is kept. */
   function hashTabs(container) {
     const links = [...container.querySelectorAll('[data-bs-toggle="pill"]')];
     const show = (hash) => {
-      const link = links.find((l) => l.getAttribute('href') === hash);
+      const base = hash.split('/')[0];
+      const link = links.find((l) => l.getAttribute('href') === base);
       if (link && window.bootstrap) window.bootstrap.Tab.getOrCreateInstance(link).show();
     };
     links.forEach((link) => link.addEventListener('shown.bs.tab', () => {
-      history.replaceState(null, '', link.getAttribute('href'));
+      const href = link.getAttribute('href');
+      if (window.location.hash.split('/')[0] !== href) history.replaceState(null, '', href);
     }));
     if (window.location.hash) show(window.location.hash);
     // Back/forward buttons and #links on the same page change only the hash.

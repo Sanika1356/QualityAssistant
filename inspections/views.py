@@ -312,6 +312,14 @@ from .serializers import (
 )
 
 
+NORMAL_MESSAGE = "Incident cannot be created because this inspection was predicted as Normal."
+NOT_COMPLETED_MESSAGES = {
+    Inspection.Status.QUEUED: "Incident cannot be created because this inspection is still queued and has no prediction yet.",
+    Inspection.Status.PROCESSING: "Incident cannot be created because this inspection is still processing and has no prediction yet.",
+    Inspection.Status.FAILED: "Incident cannot be created because this inspection failed and has no prediction.",
+}
+
+
 def generate_safe_incident_content(inspection):
     """
     Connects Person 3's AI/SOP function.
@@ -433,14 +441,16 @@ class IncidentListCreateAPIView(APIView):
 
             if inspection.status != Inspection.Status.COMPLETED:
                 return Response(
-                    {"detail": "Only completed inspections can create incidents."},
+                    {"detail": NOT_COMPLETED_MESSAGES.get(
+                        inspection.status, "Only completed inspections can create incidents."
+                    )},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # Use the original classifier prediction, never the human review.
             if inspection.predicted_class != Inspection.PredictedClass.DEFECTIVE:
                 return Response(
-                    {"detail": "Only inspections flagged as Defective by the classifier are eligible."},
+                    {"detail": NORMAL_MESSAGE},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 

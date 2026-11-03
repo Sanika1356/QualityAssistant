@@ -1,29 +1,56 @@
 {% load static %}
-{# Supervisor screen. Layout follows Person 4's original review history and metrics screens. #}
+{# Supervisor screen: quality incidents first, then Round 2 inspection review and model metrics. #}
 <div class="page-head">
   <div>
-    <h1>Review</h1>
-    <p class="lead-text">Check every engineer's results, confirm or correct them, and see how the model was evaluated.</p>
+    <h1>Supervisor</h1>
+    <p class="lead-text">Review quality incidents, check every engineer's inspections, and see how the model was evaluated.</p>
   </div>
 </div>
 
 <ul class="nav section-tabs" role="tablist" aria-label="Supervisor tools" data-tabs>
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="tab-review" data-bs-toggle="pill" href="#review" role="tab"
-       aria-controls="review" aria-selected="true">History &amp; review</a>
+    <a class="nav-link active" id="tab-incidents" data-bs-toggle="pill" href="#incidents" role="tab"
+       aria-controls="incidents" aria-selected="true">Supervisor Dashboard</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="tab-review" data-bs-toggle="pill" href="#review" role="tab"
+       aria-controls="review" aria-selected="false">Inspection review</a>
   </li>
   <li class="nav-item" role="presentation">
     <a class="nav-link" id="tab-metrics" data-bs-toggle="pill" href="#metrics" role="tab"
        aria-controls="metrics" aria-selected="false">Model metrics</a>
   </li>
-  <li class="nav-item" role="presentation">
-    <a class="nav-link" id="tab-incidents" data-bs-toggle="pill" href="#incidents" role="tab"
-       aria-controls="incidents" aria-selected="false">Incidents</a>
-  </li>
 </ul>
 
 <div class="tab-content">
-  <section class="tab-pane fade show active" id="review" role="tabpanel" aria-labelledby="tab-review" tabindex="0">
+  {# ---------------- Supervisor Dashboard: quality incidents ---------------- #}
+  <section class="tab-pane fade show active" id="incidents" role="tabpanel" aria-labelledby="tab-incidents" tabindex="0">
+    <section class="panel" id="incidents-list" aria-labelledby="incidents-title">
+      <div class="panel-head">
+        <h2 id="incidents-title">Supervisor Dashboard</h2>
+        <span class="muted small" id="incidents-count" aria-live="polite"></span>
+      </div>
+      <div class="summary-strip" id="incidents-summary" aria-live="polite" hidden></div>
+      <div class="toolbar">
+        <div class="field">
+          <label class="form-label" for="incidents-filter">Review status</label>
+          <select class="form-select" id="incidents-filter">
+            <option value="">All review statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved for follow-up">Approved for follow-up</option>
+            <option value="Needs more information">Needs more information</option>
+          </select>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-primary" id="incidents-refresh">Refresh</button>
+        </div>
+      </div>
+      <div id="incidents-body"></div>
+    </section>
+    <section class="incident-page" id="incident-detail" aria-label="Quality incident" hidden></section>
+  </section>
+
+  <section class="tab-pane fade" id="review" role="tabpanel" aria-labelledby="tab-review" tabindex="0">
     <section class="panel" aria-labelledby="sup-history-title">
       <div class="panel-head">
         <h2 id="sup-history-title">All inspections</h2>
@@ -65,30 +92,6 @@
     {% include "partials/metrics_panel.html" %}
   </section>
 
-  {# Round 3: incidents #}
-  <section class="tab-pane fade" id="incidents" role="tabpanel" aria-labelledby="tab-incidents" tabindex="0">
-    <section class="panel" aria-labelledby="incidents-title">
-      <div class="panel-head">
-        <h2 id="incidents-title">All incidents</h2>
-        <span class="muted small" id="incidents-count" aria-live="polite"></span>
-      </div>
-      <div class="toolbar">
-        <div class="field">
-          <label class="form-label" for="incidents-filter">Decision</label>
-          <select class="form-select" id="incidents-filter">
-            <option value="">All decisions</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved for follow-up">Approved for follow-up</option>
-            <option value="Needs more information">Needs more information</option>
-          </select>
-        </div>
-        <div>
-          <button type="button" class="btn btn-outline-primary" id="incidents-refresh">Refresh</button>
-        </div>
-      </div>
-      <div id="incidents-body"></div>
-    </section>
-  </section>
 </div>
 
 {% include "partials/inspection_dialog.html" %}

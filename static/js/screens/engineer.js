@@ -1,4 +1,4 @@
-/* Engineer screen: single inspection, batch, and my history.
+/* Engineer screen: dashboard, my inspections, quality incidents, and new inspections (single and batch).
  * Batch flow (file list, 10-file limit, 2-second polling) builds on Person 4's batch_inspection.js.
  */
 (function () {
@@ -6,6 +6,7 @@
   const { api, showAlert, clearAlert, setBusy } = window.App;
   const UI = window.UI;
   const { el } = UI;
+  const Incidents = window.Incidents;
 
   const MAX_FILES = 10;
   const POLL_MS = 2000;
@@ -86,7 +87,7 @@
     clearAlert(single.alert);
     if (!files.length) return;
     if (files.length > 1) {
-      showAlert(single.alert, 'Choose one image here. Use the Batch tab for several images.', 'warning');
+      showAlert(single.alert, 'Choose one image here. Use Batch inspection below for several images.', 'warning');
     }
     single.file = files[0];
     if (single.previewUrl) URL.revokeObjectURL(single.previewUrl);
@@ -112,9 +113,9 @@
     const card = UI.verdictCard(item, { eyebrow });
     const footer = el('p', { class: 'small muted mt-3 mb-0' },
       `Saved as inspection #${item.id}. `,
-      el('a', { href: '#history', text: 'See it in My history', onclick: (e) => { e.preventDefault(); showTab('#history'); } }),
+      el('a', { href: '#inspections', text: 'See it in My Inspections', onclick: (e) => { e.preventDefault(); showTab('#inspections'); } }),
       '.');
-    single.result.replaceChildren(card, footer, window.Incidents.createPanel(item, loadIncidents));
+    single.result.replaceChildren(card, footer, Incidents.createPanel(item, refreshCounts));
   }
 
   wireDropzone(single.drop, single.input, chooseSingle);
@@ -357,7 +358,7 @@
     }
   });
 
-  /* ================= History ================= */
+  /* ================= My Inspections ================= */
 
   const hist = {
     prediction: document.getElementById('history-prediction'),
@@ -365,9 +366,34 @@
     body: document.getElementById('history-body'),
     count: document.getElementById('history-count'),
     refresh: document.getElementById('history-refresh'),
+    details: document.getElementById('inspection-details'),
+    detailsBody: document.getElementById('inspection-details-body'),
+    selected: null,
   };
   let historyStale = true;
   let historyRequest = 0;
+
+  function inspectionsTable(items) {
+    return el('div', { class: 'table-responsive' },
+      el('table', { class: 'table table-vi table-actions inspections-table' },
+        el('thead', {}, el('tr', {}, ['Inspection', 'Product', 'Original prediction', 'Status', '']
+          .map((h) => el('th', { scope: 'col', text: h })))),
+        el('tbody', {}, items.map((item) => el('tr', {
+          dataset: { id: item.id },
+          class: item.id === hist.selected ? 'is-selected' : null,
+        },
+        el('td', {},
+          el('div', { class: 'file-name', text: Incidents.inspectionCode(item.id) }),
+          el('div', { class: 'sub', text: item.original_filename })),
+        el('td', { text: item.product || '—' }),
+        el('td', {}, UI.resultBadge(item.predicted_class)),
+        el('td', {}, UI.statusChip(item.status)),
+        el('td', { class: 'text-end' }, el('button', {
+          type: 'button', class: 'btn btn-sm btn-outline-primary', text: 'View details',
+          'aria-label': `View details of ${Incidents.inspectionCode(item.id)}`,
+          onclick: () => selectInspection(item.id),
+        })))))));
+  }
 
   async function loadHistory() {
     const request = ++historyRequest;
@@ -379,22 +405,67 @@
       const filtered = hist.prediction.value || hist.review.value;
       hist.count.textContent = `${items.length} inspection${items.length === 1 ? '' : 's'}${filtered ? ' match' : ''}`;
       hist.body.replaceChildren(items.length
-        ? UI.historyTable(items, { onOpen: openDetail })
+        ? inspectionsTable(items)
         : UI.state('empty',
           filtered ? 'No inspections match these filters' : 'No inspections yet',
-          filtered ? 'Try a different result or review state.' : 'Inspect a plate or run a batch, and it will appear here.'));
+          filtered ? 'Try a different result or review state.' : 'Use New Inspection to inspect a plate, and it will appear here.'));
     } catch (error) {
       if (request !== historyRequest) return;
       hist.count.textContent = '';
-      hist.body.replaceChildren(UI.state('error', 'Could not load your history', error.message));
+      hist.body.replaceChildren(UI.state('error', 'Could not load your inspections', error.message));
     }
   }
 
-  function openDetail(item) {
-    UI.showDialog(`Inspection #${item.id} · ${item.original_filename}`,
-      UI.detailLayout(item, [
-        UI.originalBlock(item), UI.reviewBlock(item), window.Incidents.createPanel(item, loadIncidents),
-      ]));
+  /* A Supervisor's Round 2 review, kept apart from the original prediction. */
+  function humanReview(item) {
+    if (!item.review) return null;
+    const corrected = item.review.reviewed_class !== item.predicted_class;
+    return el('section', { class: 'detail-block is-review' },
+      el('h3', {}, el('span', { text: corrected ? 'Human correction (recorded separately)' : 'Human review (recorded separately)' }),
+        UI.reviewChip(item)),
+      el('dl', { class: 'facts incident-facts' },
+        el('div', {}, el('dt', { text: 'Reviewed result' }), el('dd', {}, UI.resultBadge(item.review.reviewed_class))),
+        el('div', {}, el('dt', { text: 'Reviewer' }), el('dd', { text: item.review.reviewer })),
+        el('div', { style: 'grid-column:1/-1' }, el('dt', { text: 'Comment' }),
+          el('dd', { style: 'font-weight:400', text: item.review.comment || 'No comment.' }))),
+      el('p', { class: 'note mt-3 mb-0', text: 'The original prediction above is what decides whether an incident can be created.' }));
+  }
+
+  async function selectInspection(id) {
+    hist.selected = id;
+    hist.body.querySelectorAll('tr[data-id]').forEach((row) => row.classList.toggle('is-selected', Number(row.dataset.id) === id));
+    hist.detailsBody.replaceChildren(UI.state('loading', 'Loading the inspection…'));
+    let item;
+    try {
+      item = await api(`/api/inspections/${id}/`);
+    } catch (error) {
+      hist.detailsBody.replaceChildren(UI.state('error', 'Could not load this inspection', error.message));
+      return;
+    }
+    if (hist.selected !== id) return; // another row was chosen meanwhile
+    const completed = item.status === 'completed';
+    hist.detailsBody.replaceChildren(el('div', { class: 'reveal' },
+      el('div', { class: 'details-grid' },
+        item.image_url
+          ? el('img', { class: 'details-image', src: item.image_url, alt: `Inspected plate: ${item.original_filename}` })
+          : el('span', { class: 'thumb thumb-empty details-image', text: 'No image' }),
+        el('dl', { class: 'facts incident-facts' },
+          [
+            ['Inspection ID', Incidents.inspectionCode(item.id)],
+            ['Product ID', item.product || '—'],
+            ['Original prediction', completed ? UI.resultBadge(item.predicted_class) : '—'],
+            ['Status', UI.statusChip(item.status)],
+            ['Model version', item.model_version || '—'],
+            ['Confidence', completed ? UI.percent(item.confidence) : '—'],
+            ['File name', item.original_filename],
+            ['Inspected', UI.when(item.created_at)],
+          ].concat(item.status === 'failed' ? [['Reason', item.failure_reason || '—']] : [])
+            .map(([label, value]) => el('div', {}, el('dt', { text: label }), el('dd', {}, value))))),
+      humanReview(item),
+      Incidents.createPanel(item, refreshCounts)));
+    if (window.matchMedia('(max-width: 991.98px)').matches) {
+      hist.details.scrollIntoView({ block: 'start' });
+    }
   }
 
   hist.prediction.addEventListener('change', loadHistory);
@@ -405,22 +476,58 @@
     const link = document.querySelector(`[data-tabs] [href="${hash}"]`);
     if (link && window.bootstrap) window.bootstrap.Tab.getOrCreateInstance(link).show();
   }
-  document.getElementById('tab-history').addEventListener('shown.bs.tab', () => {
+  document.getElementById('tab-inspections').addEventListener('shown.bs.tab', () => {
     if (historyStale) loadHistory();
   });
-  if (window.location.hash === '#history') loadHistory();
+  if (window.location.hash === '#inspections') loadHistory();
 
-  /* ================= Round 3: my incidents ================= */
-  const loadIncidents = window.Incidents.listScreen({
+  /* ================= Dashboard ================= */
+
+  const dashboard = document.getElementById('dashboard-counts');
+  let dashboardRequest = 0;
+
+  async function loadDashboard() {
+    const request = ++dashboardRequest;
+    dashboard.replaceChildren(el('div', {}, el('div', { class: 'label', text: 'Loading…' })));
+    try {
+      const [inspections, incidents] = await Promise.all([api('/api/inspections/'), api('/api/incidents/')]);
+      if (request !== dashboardRequest) return;
+      dashboard.replaceChildren(...[
+        ['My inspections', inspections.length],
+        ['Defective inspections', inspections.filter((i) => i.predicted_class === 'Defective').length],
+        ['My incidents', incidents.length],
+        ['Incidents pending review', incidents.filter((i) => i.decision === 'Pending').length],
+      ].map(([label, value]) => el('div', {}, el('div', { class: 'label', text: label }), el('div', { class: 'value', text: value }))));
+    } catch (error) {
+      if (request !== dashboardRequest) return;
+      dashboard.replaceChildren(el('div', {}, el('div', { class: 'label', text: `Could not load counts: ${error.message}` })));
+    }
+  }
+
+  document.getElementById('dashboard-refresh').addEventListener('click', loadDashboard);
+  document.getElementById('tab-dashboard').addEventListener('shown.bs.tab', loadDashboard);
+
+  /* ================= Quality Incidents ================= */
+
+  const incidents = Incidents.mount({
+    tab: document.getElementById('tab-incidents'),
+    isDefault: false,
+    list: document.getElementById('incidents-list'),
+    detail: document.getElementById('incident-detail'),
     body: document.getElementById('incidents-body'),
     count: document.getElementById('incidents-count'),
     refresh: document.getElementById('incidents-refresh'),
     canDecide: false,
     showEngineer: false,
   });
-  document.getElementById('tab-incidents').addEventListener('shown.bs.tab', loadIncidents);
-  if (window.location.hash === '#incidents') loadIncidents();
+
+  function refreshCounts() {
+    historyStale = true;
+    loadDashboard();
+  }
 
   loadProducts();
   restoreLastSingle();
+  loadDashboard();
+  incidents.route();
 })();

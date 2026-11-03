@@ -280,3 +280,83 @@ class BriefGapTests(IncidentTestBase):
         self.assertIn('confidence > 99.9%', summary)
         self.assertNotIn('100.0%', summary)
         self.assertNotIn('100%', summary)
+
+
+class WorkflowScreenTests(IncidentTestBase):
+    """INC numbers, the exact refusal messages, and the page layout the demo relies on."""
+
+    def test_incident_has_inc_number(self):
+        data = self.create().data
+        incident = Incident.objects.get()
+        self.assertEqual(data['incident_number'], incident.pk)
+        self.assertEqual(data['incident_code'], f'INC-{incident.pk}')
+        self.assertEqual(data['incident_id'], str(incident.incident_id))  # the real ID is still returned
+
+        listed = self.as_user(self.supervisor).get(URL).data[0]
+        self.assertEqual(listed['incident_code'], f'INC-{incident.pk}')
+        repeat = self.create().data
+        self.assertEqual(repeat['incident_code'], data['incident_code'])
+
+    def test_inc_numbers_are_unique_per_incident(self):
+        first = self.create().data['incident_code']
+        second = self.create(self.make_inspection(self.plate)).data['incident_code']
+        self.assertNotEqual(first, second)
+
+    def test_exact_normal_message(self):
+        normal = self.make_inspection(self.plate, predicted_class='Normal')
+        response = self.create(normal)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data['detail'],
+            'Incident cannot be created because this inspection was predicted as Normal.',
+        )
+        self.assertEqual(Incident.objects.count(), 0)
+
+    def test_clear_messages_for_unfinished_inspections(self):
+        expected = {
+            'queued': 'still queued',
+            'processing': 'still processing',
+            'failed': 'failed and has no prediction',
+        }
+        for state, words in expected.items():
+            with self.subTest(state=state):
+                inspection = self.make_inspection(self.plate, status=state, predicted_class=None)
+                detail = self.create(inspection).data['detail']
+                self.assertTrue(detail.startswith('Incident cannot be created because this inspection'))
+                self.assertIn(words, detail)
+        self.assertEqual(Incident.objects.count(), 0)
+
+
+class WorkflowPageTests(IncidentTestBase):
+    def page(self, user, path):
+        self.client.force_login(user)
+        return self.client.get(path).content.decode()
+
+    def test_engineer_tabs_in_order_and_dashboard_first(self):
+        html = self.page(self.engineer, '/engineer/')
+        labels = ['>Dashboard<', '>My Inspections<', '>Quality Incidents<', '>New Inspection<']
+        positions = [html.index(label) for label in labels]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn('class="tab-pane fade show active" id="dashboard"', html)
+        # Single and batch upload both live inside New Inspection.
+        new_pane = html[html.index('id="new"'):]
+        self.assertIn('id="single-form"', new_pane)
+        self.assertIn('id="batch-form"', new_pane)
+        self.assertIn('id="inspection-details"', html)
+        self.assertIn('id="incident-detail"', html)
+
+    def test_supervisor_dashboard_is_first_and_default(self):
+        html = self.page(self.supervisor, '/supervisor/')
+        positions = [html.index(label) for label in ('>Supervisor Dashboard<', '>Inspection review<', '>Model metrics<')]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn('class="tab-pane fade show active" id="incidents"', html)
+        self.assertIn('id="incidents-summary"', html)
+
+    def test_incident_screen_wording(self):
+        from django.conf import settings
+        script = (settings.BASE_DIR / 'static' / 'js' / 'incidents.js').read_text(encoding='utf-8')
+        for text in ('Quality Incident ', 'INC-', 'AI suggested actions', 'Supporting documents', 'Insufficient evidence',
+                     'Manual review required', 'No supported actions available.', 'Supervisor Review', 'Submit review',
+                     'Create Quality Incident', 'Finding the SOPs and preparing the incident', 'not product release'):
+            with self.subTest(text=text):
+                self.assertIn(text, script)

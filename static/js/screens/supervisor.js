@@ -1,4 +1,4 @@
-/* Supervisor screen: all inspections, filters, search, and one-time reviews.
+/* Supervisor screen: quality incidents (default), then all inspections, filters, search, and one-time reviews.
  * Table and review-panel layout follow Person 4's supervisor_history screen; all data comes from the API.
  */
 (function () {
@@ -157,17 +157,21 @@
   s.search.addEventListener('input', render);
   document.getElementById('sup-filters').addEventListener('submit', (e) => e.preventDefault());
 
-  /* Round 3: incidents */
-  const loadIncidents = window.Incidents.listScreen({
+  /* Round 3: Supervisor Dashboard (quality incidents), the default view */
+  const incidents = window.Incidents.mount({
+    tab: document.getElementById('tab-incidents'),
+    isDefault: true,
+    list: document.getElementById('incidents-list'),
+    detail: document.getElementById('incident-detail'),
     body: document.getElementById('incidents-body'),
     count: document.getElementById('incidents-count'),
+    summary: document.getElementById('incidents-summary'),
     filter: document.getElementById('incidents-filter'),
     refresh: document.getElementById('incidents-refresh'),
     canDecide: true,
     showEngineer: true,
   });
-  document.getElementById('tab-incidents').addEventListener('shown.bs.tab', loadIncidents);
-  if (window.location.hash === '#incidents') loadIncidents();
+  incidents.route();
 
   load();
 })();

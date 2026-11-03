@@ -249,12 +249,12 @@ An Administrator alone cannot view or review incidents.
 
 ### Round 3 demonstration
 
-1. **Engineer:** in My history, open a completed Defective inspection and click **Create incident**. Show the evidence status and reason, the actions, **Documents used** (Q-PLATE-01 and Q-PLATE-02), and click **Open page** on a citation.
-2. **Engineer:** click **Create incident** again. The incident ID and the My incidents count stay the same.
-3. **Engineer:** open a Normal inspection and click **Create incident**. A message appears and no incident is created.
-4. **Engineer:** rename `pack_data\SOPs\Q_PLATE_02_Review_Rev1_0.pdf`, create an incident for a fresh Defective inspection, and show Insufficient and Manual review required. Rename the file back.
+1. **Engineer:** the page opens on **Dashboard** with real counts. In **My Inspections**, select a completed Defective inspection (`INS-<id>`). Its details show on the page; click **Create Quality Incident**. The incident page (`INC-<number>`) shows the inspection, summary, AI suggested actions, **Supporting documents** (Q-PLATE-01 and Q-PLATE-02), and the evidence status and reason. Click **Open page** on a citation.
+2. **Engineer:** click **Create Quality Incident** again. The same incident opens with a message, and the **My incidents** count on the Dashboard stays the same.
+3. **Engineer:** select a Normal inspection and click **Create Quality Incident**. The message reads "Incident cannot be created because this inspection was predicted as Normal." and no incident is created.
+4. **Engineer:** rename `pack_data\SOPs\Q_PLATE_02_Review_Rev1_0.pdf`, create an incident for a fresh Defective inspection, and show Insufficient evidence, Manual review required and "No supported actions available." Rename the file back.
 5. **Engineer:** in an incident, click **Attempt review as Engineer**. The server refuses with "Only Supervisors can review incidents."
-6. **Supervisor:** in the Incidents tab, review the incident with a comment, then reload and open it again to show the inspection, original output, recommendations, sources and saved review.
+6. **Supervisor:** the page opens on **Supervisor Dashboard**. Open the incident, choose a decision, add the required comment and click **Submit review**. Refresh the browser to show the saved review, inspection, original output, recommendations and sources. Inspection review and model metrics are the later tabs.
 
 ### Reused from earlier rounds
 

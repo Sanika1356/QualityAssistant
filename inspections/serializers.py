@@ -112,6 +112,13 @@ class IncidentSerializer(serializers.ModelSerializer):
 
     human_correction = serializers.SerializerMethodField()
 
+    # Short display number (INC-<number>); incident_id stays the real identifier.
+    incident_number = serializers.IntegerField(source='pk', read_only=True)
+    incident_code = serializers.SerializerMethodField()
+
+    def get_incident_code(self, incident):
+        return f'INC-{incident.pk}'
+
     # The saved Round 2 inspection the incident came from.
     inspection_image_url = serializers.SerializerMethodField()
     inspection_original_filename = serializers.CharField(
@@ -136,6 +143,8 @@ class IncidentSerializer(serializers.ModelSerializer):
         model = Incident
         fields = [
             'incident_id',
+            'incident_number',
+            'incident_code',
             'inspection_id',
             'inspection_image_url',
             'inspection_original_filename',

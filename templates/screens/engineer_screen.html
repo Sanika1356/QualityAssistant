@@ -1,34 +1,107 @@
 {% load static %}
-{# Engineer screen. Layout follows Person 4's original single / batch / history screens. #}
+{# Engineer screen: dashboard, my inspections, quality incidents, and new inspections (single and batch). #}
 <div class="page-head">
   <div>
-    <h1>Inspections</h1>
-    <p class="lead-text">Inspect one plate now, send a batch to run in the background, or look back at your results.</p>
+    <h1>Engineer workspace</h1>
+    <p class="lead-text">See your inspections, turn a Defective result into a quality incident, or inspect new plates.</p>
   </div>
 </div>
 
-<ul class="nav section-tabs" role="tablist" aria-label="Inspection tools" data-tabs>
+<ul class="nav section-tabs" role="tablist" aria-label="Engineer tools" data-tabs>
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="tab-single" data-bs-toggle="pill" href="#single" role="tab"
-       aria-controls="single" aria-selected="true">Single inspection</a>
+    <a class="nav-link active" id="tab-dashboard" data-bs-toggle="pill" href="#dashboard" role="tab"
+       aria-controls="dashboard" aria-selected="true">Dashboard</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="tab-batch" data-bs-toggle="pill" href="#batch" role="tab"
-       aria-controls="batch" aria-selected="false">Batch</a>
-  </li>
-  <li class="nav-item" role="presentation">
-    <a class="nav-link" id="tab-history" data-bs-toggle="pill" href="#history" role="tab"
-       aria-controls="history" aria-selected="false">My history</a>
+    <a class="nav-link" id="tab-inspections" data-bs-toggle="pill" href="#inspections" role="tab"
+       aria-controls="inspections" aria-selected="false">My Inspections</a>
   </li>
   <li class="nav-item" role="presentation">
     <a class="nav-link" id="tab-incidents" data-bs-toggle="pill" href="#incidents" role="tab"
-       aria-controls="incidents" aria-selected="false">My incidents</a>
+       aria-controls="incidents" aria-selected="false">Quality Incidents</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="tab-new" data-bs-toggle="pill" href="#new" role="tab"
+       aria-controls="new" aria-selected="false">New Inspection</a>
   </li>
 </ul>
 
 <div class="tab-content">
-  {# ---------------- Single inspection ---------------- #}
-  <section class="tab-pane fade show active" id="single" role="tabpanel" aria-labelledby="tab-single" tabindex="0">
+  {# ---------------- Dashboard ---------------- #}
+  <section class="tab-pane fade show active" id="dashboard" role="tabpanel" aria-labelledby="tab-dashboard" tabindex="0">
+    <section class="panel" aria-labelledby="dashboard-title">
+      <div class="panel-head">
+        <h2 id="dashboard-title">Dashboard</h2>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="dashboard-refresh">Refresh</button>
+      </div>
+      <div class="summary-strip" id="dashboard-counts" aria-live="polite"></div>
+      <div class="panel-body dashboard-actions">
+        <a class="btn btn-primary" href="#inspections">Go to My Inspections</a>
+        <a class="btn btn-outline-primary" href="#incidents">Go to Quality Incidents</a>
+      </div>
+    </section>
+  </section>
+
+  {# ---------------- My Inspections ---------------- #}
+  <section class="tab-pane fade" id="inspections" role="tabpanel" aria-labelledby="tab-inspections" tabindex="0">
+    <div class="inspections-layout">
+      <section class="panel" aria-labelledby="history-title">
+        <div class="panel-head">
+          <h2 id="history-title">My Inspections</h2>
+          <span class="muted small" id="history-count" aria-live="polite"></span>
+        </div>
+        <form class="toolbar" id="history-filters" role="search" aria-label="Filter my inspections">
+          <div class="field">
+            <label class="form-label" for="history-prediction">Original prediction</label>
+            <select class="form-select" id="history-prediction" name="prediction">
+              <option value="">All results</option>
+              <option value="Normal">Normal</option>
+              <option value="Defective">Defective</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="form-label" for="history-review">Review</label>
+            <select class="form-select" id="history-review" name="review_status">
+              <option value="">Any review state</option>
+              <option value="pending">Awaiting review</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="corrected">Corrected</option>
+            </select>
+          </div>
+          <div>
+            <button type="button" class="btn btn-outline-primary" id="history-refresh">Refresh</button>
+          </div>
+        </form>
+        <div id="history-body"></div>
+      </section>
+
+      <section class="panel inspection-details" id="inspection-details" aria-labelledby="details-title" tabindex="-1">
+        <div class="panel-head"><h2 id="details-title">Inspection Details</h2></div>
+        <div class="panel-body" id="inspection-details-body">
+          <p class="muted mb-0">Select an inspection in the list to see its details here.</p>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  {# ---------------- Quality Incidents ---------------- #}
+  <section class="tab-pane fade" id="incidents" role="tabpanel" aria-labelledby="tab-incidents" tabindex="0">
+    <section class="panel" id="incidents-list" aria-labelledby="incidents-title">
+      <div class="panel-head">
+        <h2 id="incidents-title">Quality Incidents</h2>
+        <span class="muted small" id="incidents-count" aria-live="polite"></span>
+      </div>
+      <div class="toolbar">
+        <button type="button" class="btn btn-outline-primary" id="incidents-refresh">Refresh</button>
+      </div>
+      <div id="incidents-body"></div>
+    </section>
+    <section class="incident-page" id="incident-detail" aria-label="Quality incident" hidden></section>
+  </section>
+
+  {# ---------------- New Inspection: single and batch ---------------- #}
+  <section class="tab-pane fade" id="new" role="tabpanel" aria-labelledby="tab-new" tabindex="0">
+    <h2 class="section-title">Single inspection</h2>
     <div class="single-column">
         <form class="panel" id="single-form" novalidate>
           <div class="panel-head"><h2>Inspect one plate</h2></div>
@@ -67,10 +140,8 @@
           </div>
         </div>
     </div>
-  </section>
 
-  {# ---------------- Batch ---------------- #}
-  <section class="tab-pane fade" id="batch" role="tabpanel" aria-labelledby="tab-batch" tabindex="0">
+    <h2 class="section-title mt-5">Batch inspection</h2>
     <div class="row g-4">
       <div class="col-lg-4">
         <form class="panel" id="batch-form" novalidate>
@@ -125,56 +196,7 @@
       </div>
     </div>
   </section>
-
-  {# ---------------- History ---------------- #}
-  <section class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="tab-history" tabindex="0">
-    <section class="panel" aria-labelledby="history-title">
-      <div class="panel-head">
-        <h2 id="history-title">My history</h2>
-        <span class="muted small" id="history-count" aria-live="polite"></span>
-      </div>
-      <form class="toolbar" id="history-filters" role="search" aria-label="Filter my history">
-        <div class="field">
-          <label class="form-label" for="history-prediction">Result</label>
-          <select class="form-select" id="history-prediction" name="prediction">
-            <option value="">All results</option>
-            <option value="Normal">Normal</option>
-            <option value="Defective">Defective</option>
-          </select>
-        </div>
-        <div class="field">
-          <label class="form-label" for="history-review">Review</label>
-          <select class="form-select" id="history-review" name="review_status">
-            <option value="">Any review state</option>
-            <option value="pending">Awaiting review</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="corrected">Corrected</option>
-          </select>
-        </div>
-        <div>
-          <button type="button" class="btn btn-outline-primary" id="history-refresh">Refresh</button>
-        </div>
-      </form>
-      <div id="history-body"></div>
-    </section>
-  </section>
-
-  {# ---------------- Round 3: incidents ---------------- #}
-  <section class="tab-pane fade" id="incidents" role="tabpanel" aria-labelledby="tab-incidents" tabindex="0">
-    <section class="panel" aria-labelledby="incidents-title">
-      <div class="panel-head">
-        <h2 id="incidents-title">My incidents</h2>
-        <span class="muted small" id="incidents-count" aria-live="polite"></span>
-      </div>
-      <div class="toolbar">
-        <button type="button" class="btn btn-outline-primary" id="incidents-refresh">Refresh</button>
-      </div>
-      <div id="incidents-body"></div>
-    </section>
-  </section>
 </div>
-
-{% include "partials/inspection_dialog.html" %}
 
 {# defer: runs after the page and Bootstrap (loaded at the end of base.html) are ready. #}
 <script defer src="{% static 'js/incidents.js' %}"></script>
