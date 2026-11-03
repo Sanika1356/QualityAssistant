@@ -1315,3 +1315,23 @@ h1, h2, h3, .h1, .h2, .h3 {
   .section-tabs .nav-item { flex: 1 1 45%; }
   .section-tabs .nav-link { white-space: normal; border-radius: 0.5rem; }
 }
+
+/* My Inspections table: keep every cell on one line so chips and buttons are never cut;
+   the table scrolls sideways inside its own box if it is still too wide. */
+.inspections-table th,
+.inspections-table td { white-space: nowrap; padding-left: 0.5rem; padding-right: 0.5rem; }
+.inspections-table .sub { max-width: 9.5rem; overflow: hidden; text-overflow: ellipsis; }
+.inspections-table .btn { white-space: nowrap; }
+#history-body .table-responsive { overflow-x: auto; overflow-y: visible; }
+@media (min-width: 992px) {
+  .inspections-layout { grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem); }
+  /* The pinned details panel never grows past the window, so its button stays reachable;
+     the mouse wheel scrolls it, then carries on scrolling the page. */
+  .inspection-details { max-height: calc(100vh - 2rem); overflow-y: auto; overscroll-behavior: auto; }
+}
+/* Inspection Details: badges and chips stay on one line; image above the facts in the side panel. */
+.inspection-details .chip,
+.inspection-details .result { white-space: nowrap; }
+@media (min-width: 992px) {
+  .inspection-details .details-grid { grid-template-columns: minmax(0, 1fr); }
+}
